@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
 
+/// <summary>
+/// Handles file upload, parsing, and persistence.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class UploadFileController : ControllerBase
@@ -15,6 +18,12 @@ public class UploadFileController : ControllerBase
         _parseService = parseService;
     }
 
+    /// <summary>
+    /// Uploads a file, parses its contents, and saves the parsed data (currently supports only .json file).
+    /// </summary>
+    /// <param name="request">Multipart request containing the file.</param>
+    /// <response code="200">File processed successfully and parsed data returned.</response>
+    /// <response code="400">Uploaded file is invalid or cannot be parsed.</response>
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadFile([FromForm] UploadFileRequest request)

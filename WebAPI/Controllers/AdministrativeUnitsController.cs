@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
 
+/// <summary>
+/// Manages administrative units.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AdministrativeUnitsController : ControllerBase
@@ -15,6 +18,10 @@ public class AdministrativeUnitsController : ControllerBase
         _administrativeUnitService = administrativeUnitService;
     }
 
+    /// <summary>
+    /// Returns all administrative units.
+    /// </summary>
+    /// <response code="200">List of administrative units.</response>
     [HttpGet]
     public async Task<ActionResult<List<AdministrativeUnitDto>>> GetAll()
     {
@@ -22,6 +29,11 @@ public class AdministrativeUnitsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Creates a new administrative unit.
+    /// </summary>
+    /// <param name="dto">Administrative unit payload.</param>
+    /// <response code="200">Administrative unit created successfully.</response>
     [HttpPost]
     public async Task<ActionResult<AdministrativeUnitDto>> Create([FromBody] AdministrativeUnitDto dto)
     {
@@ -29,6 +41,12 @@ public class AdministrativeUnitsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Updates an existing administrative unit.
+    /// </summary>
+    /// <param name="id">Administrative unit identifier.</param>
+    /// <param name="dto">Administrative unit payload.</param>
+    /// <response code="200">Administrative unit updated successfully.</response>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AdministrativeUnitDto>> Update(Guid id, [FromBody] AdministrativeUnitDto dto)
     {
@@ -37,6 +55,11 @@ public class AdministrativeUnitsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Deletes an administrative unit by identifier.
+    /// </summary>
+    /// <param name="id">Administrative unit identifier.</param>
+    /// <response code="204">Administrative unit deleted successfully.</response>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

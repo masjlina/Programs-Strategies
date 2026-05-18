@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
 
+/// <summary>
+/// Manages operational goals.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class OperationalGoalsController : ControllerBase
@@ -15,6 +18,10 @@ public class OperationalGoalsController : ControllerBase
         _operationalGoalService = operationalGoalService;
     }
 
+    /// <summary>
+    /// Returns all operational goals.
+    /// </summary>
+    /// <response code="200">List of operational goals.</response>
     [HttpGet]
     public async Task<ActionResult<List<OperationalGoalDto>>> GetAll()
     {
@@ -22,6 +29,11 @@ public class OperationalGoalsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Creates a new operational goal.
+    /// </summary>
+    /// <param name="dto">Operational goal payload.</param>
+    /// <response code="200">Operational goal created successfully.</response>
     [HttpPost]
     public async Task<ActionResult<OperationalGoalDto>> Create([FromBody] OperationalGoalDto dto)
     {
@@ -29,6 +41,12 @@ public class OperationalGoalsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Updates an existing operational goal.
+    /// </summary>
+    /// <param name="id">Operational goal identifier.</param>
+    /// <param name="dto">Operational goal payload.</param>
+    /// <response code="200">Operational goal updated successfully.</response>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<OperationalGoalDto>> Update(Guid id, [FromBody] OperationalGoalDto dto)
     {
@@ -37,6 +55,11 @@ public class OperationalGoalsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Deletes an operational goal by identifier.
+    /// </summary>
+    /// <param name="id">Operational goal identifier.</param>
+    /// <response code="204">Operational goal deleted successfully.</response>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

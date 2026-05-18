@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
 
+/// <summary>
+/// Manages strategies.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class StrategiesController : ControllerBase
@@ -15,6 +18,10 @@ public class StrategiesController : ControllerBase
         _strategyService = strategyService;
     }
 
+    /// <summary>
+    /// Returns all strategies.
+    /// </summary>
+    /// <response code="200">List of strategies.</response>
     [HttpGet]
     public async Task<ActionResult<List<StrategyDto>>> GetAll()
     {
@@ -22,6 +29,11 @@ public class StrategiesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Creates a new strategy.
+    /// </summary>
+    /// <param name="dto">Strategy payload.</param>
+    /// <response code="200">Strategy created successfully.</response>
     [HttpPost]
     public async Task<ActionResult<StrategyDto>> Create([FromBody] StrategyDto dto)
     {
@@ -29,6 +41,12 @@ public class StrategiesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Updates an existing strategy.
+    /// </summary>
+    /// <param name="id">Strategy identifier.</param>
+    /// <param name="dto">Strategy payload.</param>
+    /// <response code="200">Strategy updated successfully.</response>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<StrategyDto>> Update(Guid id, [FromBody] StrategyDto dto)
     {
@@ -37,6 +55,11 @@ public class StrategiesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Deletes a strategy by identifier.
+    /// </summary>
+    /// <param name="id">Strategy identifier.</param>
+    /// <response code="204">Strategy deleted successfully.</response>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
