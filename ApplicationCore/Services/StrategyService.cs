@@ -1,4 +1,5 @@
 using ApplicationCore.Dtos;
+using ApplicationCore.Dtos.Mappers;
 using ApplicationCore.Services.IServices;
 using Infrastructure.Data;
 using Infrastructure.Entities;
@@ -9,33 +10,46 @@ namespace ApplicationCore.Services;
 public class StrategyService : IStrategyService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMapper<Strategy, StrategyDto> _mapper;
 
-    public StrategyService(ApplicationDbContext dbContext)
+    public StrategyService(
+        ApplicationDbContext dbContext,
+        IMapper<Strategy, StrategyDto> mapper)
     {
         _dbContext = dbContext;
+        _mapper = mapper;
     }
 
     public async Task<List<StrategyDto>> GetAllAsync()
     {
         var strategies = await _dbContext.Strategies.ToListAsync();
+        return strategies.Select(_mapper.ToDto).ToList();
+    }
 
-        return strategies.Select(MapToDto).ToList();
+    public async Task<StrategyDto> GetWithNestedById(Guid id)
+    {
+        var strategy = await _dbContext.Strategies.Where(x => x.Id == id)
+            .Include(x => x.StrategicGoals)
+            .ThenInclude(x => x.OperationalGoals)
+            .ThenInclude(x => x.ProgramTasks)
+            .SingleOrDefaultAsync();
+
+        if (strategy is null)
+            throw new Exception("The given object does not exist");
+
+        return _mapper.ToDto(strategy);
     }
 
     public async Task<StrategyDto> CreateAsync(StrategyDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var strategyToAdd = new Strategy
-        {
-            Title = dto.Title,
-            AdministrativeUnitId = dto.AdministrativeUnitId
-        };
+        var strategyToAdd = _mapper.ToEntity(dto);
 
         _dbContext.Strategies.Add(strategyToAdd);
         await _dbContext.SaveChangesAsync();
 
-        return MapToDto(strategyToAdd);
+        return _mapper.ToDto(strategyToAdd);
     }
 
     public async Task<StrategyDto> UpdateAsync(StrategyDto dto)
@@ -54,7 +68,7 @@ public class StrategyService : IStrategyService
             strategyToUpdate.AdministrativeUnitId = dto.AdministrativeUnitId;
 
         await _dbContext.SaveChangesAsync();
-        return MapToDto(strategyToUpdate);
+        return _mapper.ToDto(strategyToUpdate);
     }
 
     public async Task RemoveAsync(Guid id)
@@ -66,15 +80,5 @@ public class StrategyService : IStrategyService
 
         _dbContext.Strategies.Remove(strategyToDelete);
         await _dbContext.SaveChangesAsync();
-    }
-
-    private static StrategyDto MapToDto(Strategy strategy)
-    {
-        return new StrategyDto
-        {
-            Id = strategy.Id,
-            Title = strategy.Title,
-            AdministrativeUnitId = strategy.AdministrativeUnitId
-        };
     }
 }

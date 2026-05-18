@@ -1,4 +1,5 @@
 using ApplicationCore.Dtos;
+using ApplicationCore.Dtos.Mappers;
 using ApplicationCore.Services.IServices;
 using Infrastructure.Data;
 using Infrastructure.Entities;
@@ -9,35 +10,32 @@ namespace ApplicationCore.Services;
 public class StrategicGoalService : IStrategicGoalService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMapper<StrategicGoal, StrategicGoalDto> _mapper;
 
-    public StrategicGoalService(ApplicationDbContext dbContext)
+    public StrategicGoalService(
+        ApplicationDbContext dbContext,
+        IMapper<StrategicGoal, StrategicGoalDto> mapper)
     {
         _dbContext = dbContext;
+        _mapper = mapper;
     }
 
     public async Task<List<StrategicGoalDto>> GetAllAsync()
     {
         var strategicGoals = await _dbContext.StrategicGoals.ToListAsync();
-
-        return strategicGoals.Select(MapToDto).ToList();
+        return strategicGoals.Select(_mapper.ToDto).ToList();
     }
 
     public async Task<StrategicGoalDto> CreateAsync(StrategicGoalDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var strategicGoalToAdd = new StrategicGoal
-        {
-            StrategyId = dto.StrategyId,
-            Label = dto.Label,
-            Number = dto.Number,
-            Title = dto.Title
-        };
+        var strategicGoalToAdd = _mapper.ToEntity(dto);
 
         _dbContext.StrategicGoals.Add(strategicGoalToAdd);
         await _dbContext.SaveChangesAsync();
 
-        return MapToDto(strategicGoalToAdd);
+        return _mapper.ToDto(strategicGoalToAdd);
     }
 
     public async Task<StrategicGoalDto> UpdateAsync(StrategicGoalDto dto)
@@ -60,7 +58,7 @@ public class StrategicGoalService : IStrategicGoalService
             strategicGoalToUpdate.Title = dto.Title;
 
         await _dbContext.SaveChangesAsync();
-        return MapToDto(strategicGoalToUpdate);
+        return _mapper.ToDto(strategicGoalToUpdate);
     }
 
     public async Task RemoveAsync(Guid id)
@@ -72,17 +70,5 @@ public class StrategicGoalService : IStrategicGoalService
 
         _dbContext.StrategicGoals.Remove(strategicGoalToDelete);
         await _dbContext.SaveChangesAsync();
-    }
-
-    private static StrategicGoalDto MapToDto(StrategicGoal strategicGoal)
-    {
-        return new StrategicGoalDto
-        {
-            Id = strategicGoal.Id,
-            StrategyId = strategicGoal.StrategyId,
-            Label = strategicGoal.Label,
-            Number = strategicGoal.Number,
-            Title = strategicGoal.Title
-        };
     }
 }

@@ -30,6 +30,18 @@ public class StrategiesController : ControllerBase
     }
 
     /// <summary>
+    /// Return strategy with all nested elements
+    /// </summary>
+    /// <param name="id"></param>
+    /// <response code="200">Strategy object</response>
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<StrategyDto>> Get(Guid id)
+    {
+        var result = await _strategyService.GetWithNestedById(id);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Creates a new strategy.
     /// </summary>
     /// <param name="dto">Strategy payload.</param>

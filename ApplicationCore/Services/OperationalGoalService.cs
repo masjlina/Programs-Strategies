@@ -1,4 +1,5 @@
 using ApplicationCore.Dtos;
+using ApplicationCore.Dtos.Mappers;
 using ApplicationCore.Services.IServices;
 using Infrastructure.Data;
 using Infrastructure.Entities;
@@ -9,35 +10,32 @@ namespace ApplicationCore.Services;
 public class OperationalGoalService : IOperationalGoalService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMapper<OperationalGoal, OperationalGoalDto> _mapper;
 
-    public OperationalGoalService(ApplicationDbContext dbContext)
+    public OperationalGoalService(
+        ApplicationDbContext dbContext,
+        IMapper<OperationalGoal, OperationalGoalDto> mapper)
     {
         _dbContext = dbContext;
+        _mapper = mapper;
     }
 
     public async Task<List<OperationalGoalDto>> GetAllAsync()
     {
         var operationalGoals = await _dbContext.OperationalGoals.ToListAsync();
-
-        return operationalGoals.Select(MapToDto).ToList();
+        return operationalGoals.Select(_mapper.ToDto).ToList();
     }
 
     public async Task<OperationalGoalDto> CreateAsync(OperationalGoalDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var operationalGoalToAdd = new OperationalGoal
-        {
-            StrategicGoalId = dto.StrategicGoalId,
-            Label = dto.Label,
-            Number = dto.Number,
-            Title = dto.Title
-        };
+        var operationalGoalToAdd = _mapper.ToEntity(dto);
 
         _dbContext.OperationalGoals.Add(operationalGoalToAdd);
         await _dbContext.SaveChangesAsync();
 
-        return MapToDto(operationalGoalToAdd);
+        return _mapper.ToDto(operationalGoalToAdd);
     }
 
     public async Task<OperationalGoalDto> UpdateAsync(OperationalGoalDto dto)
@@ -60,7 +58,7 @@ public class OperationalGoalService : IOperationalGoalService
             operationalGoalToUpdate.Title = dto.Title;
 
         await _dbContext.SaveChangesAsync();
-        return MapToDto(operationalGoalToUpdate);
+        return _mapper.ToDto(operationalGoalToUpdate);
     }
 
     public async Task RemoveAsync(Guid id)
@@ -72,17 +70,5 @@ public class OperationalGoalService : IOperationalGoalService
 
         _dbContext.OperationalGoals.Remove(operationalGoalToDelete);
         await _dbContext.SaveChangesAsync();
-    }
-
-    private static OperationalGoalDto MapToDto(OperationalGoal operationalGoal)
-    {
-        return new OperationalGoalDto
-        {
-            Id = operationalGoal.Id,
-            StrategicGoalId = operationalGoal.StrategicGoalId,
-            Label = operationalGoal.Label,
-            Number = operationalGoal.Number,
-            Title = operationalGoal.Title
-        };
     }
 }

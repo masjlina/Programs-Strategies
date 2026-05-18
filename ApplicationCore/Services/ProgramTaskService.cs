@@ -1,4 +1,5 @@
 using ApplicationCore.Dtos;
+using ApplicationCore.Dtos.Mappers;
 using ApplicationCore.Services.IServices;
 using Infrastructure.Data;
 using Infrastructure.Entities;
@@ -9,35 +10,32 @@ namespace ApplicationCore.Services;
 public class ProgramTaskService : IProgramTaskService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IMapper<ProgramTask, ProgramTaskDto> _mapper;
 
-    public ProgramTaskService(ApplicationDbContext dbContext)
+    public ProgramTaskService(
+        ApplicationDbContext dbContext,
+        IMapper<ProgramTask, ProgramTaskDto> mapper)
     {
         _dbContext = dbContext;
+        _mapper = mapper;
     }
 
     public async Task<List<ProgramTaskDto>> GetAllAsync()
     {
         var programTasks = await _dbContext.ProgramTasks.ToListAsync();
-
-        return programTasks.Select(MapToDto).ToList();
+        return programTasks.Select(_mapper.ToDto).ToList();
     }
 
     public async Task<ProgramTaskDto> CreateAsync(ProgramTaskDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var programTaskToAdd = new ProgramTask
-        {
-            OperationalGoalId = dto.OperationalGoalId,
-            Label = dto.Label,
-            Number = dto.Number,
-            Description = dto.Description
-        };
+        var programTaskToAdd = _mapper.ToEntity(dto);
 
         _dbContext.ProgramTasks.Add(programTaskToAdd);
         await _dbContext.SaveChangesAsync();
 
-        return MapToDto(programTaskToAdd);
+        return _mapper.ToDto(programTaskToAdd);
     }
 
     public async Task<ProgramTaskDto> UpdateAsync(ProgramTaskDto dto)
@@ -60,7 +58,7 @@ public class ProgramTaskService : IProgramTaskService
             programTaskToUpdate.Description = dto.Description;
 
         await _dbContext.SaveChangesAsync();
-        return MapToDto(programTaskToUpdate);
+        return _mapper.ToDto(programTaskToUpdate);
     }
 
     public async Task RemoveAsync(Guid id)
@@ -72,17 +70,5 @@ public class ProgramTaskService : IProgramTaskService
 
         _dbContext.ProgramTasks.Remove(programTaskToDelete);
         await _dbContext.SaveChangesAsync();
-    }
-
-    private static ProgramTaskDto MapToDto(ProgramTask programTask)
-    {
-        return new ProgramTaskDto
-        {
-            Id = programTask.Id,
-            OperationalGoalId = programTask.OperationalGoalId,
-            Label = programTask.Label,
-            Number = programTask.Number,
-            Description = programTask.Description
-        };
     }
 }

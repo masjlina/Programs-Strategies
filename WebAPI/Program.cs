@@ -1,6 +1,9 @@
 using ApplicationCore.Services;
 using ApplicationCore.Services.IServices;
+using ApplicationCore.Dtos;
+using ApplicationCore.Dtos.Mappers;
 using Infrastructure.Data;
+using Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -24,6 +27,11 @@ builder.Services.AddScoped<IStrategicGoalService, StrategicGoalService>();
 builder.Services.AddScoped<IOperationalGoalService, OperationalGoalService>();
 builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
+builder.Services.AddScoped<IMapper<AdministrativeUnit, AdministrativeUnitDto>, AdministrativeUnitMapper>();
+builder.Services.AddScoped<IMapper<Strategy, StrategyDto>, StrategyMapper>();
+builder.Services.AddScoped<IMapper<StrategicGoal, StrategicGoalDto>, StrategicGoalMapper>();
+builder.Services.AddScoped<IMapper<OperationalGoal, OperationalGoalDto>, OperationalGoalMapper>();
+builder.Services.AddScoped<IMapper<ProgramTask, ProgramTaskDto>, ProgramTaskMapper>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
