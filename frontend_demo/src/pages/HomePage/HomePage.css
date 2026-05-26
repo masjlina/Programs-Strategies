@@ -1,0 +1,41 @@
+.home-hero {
+  min-height: calc(100svh - var(--header-h) - 80px);
+  display: grid;
+  align-items: center;
+  padding-block: 48px;
+}
+
+.home-hero__inner {
+  text-align: left;
+  max-width: 720px;
+}
+
+.home-hero__kicker {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  font-size: 14px;
+  color: var(--text-h);
+  margin-bottom: 12px;
+}
+
+.home-hero__title {
+  margin-bottom: 12px;
+}
+
+.home-hero__text {
+  max-width: 62ch;
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+
+.home-section {
+  padding-block: 40px;
+}
+
+.home-section--alt {
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  border-block: 1px solid var(--border);
+}
