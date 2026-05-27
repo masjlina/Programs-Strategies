@@ -11,11 +11,13 @@ namespace Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";");
+
             migrationBuilder.CreateTable(
                 name: "AdministrativeUnits",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuidv4()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     Type = table.Column<string>(type: "text", nullable: false)
                 },
@@ -28,7 +30,7 @@ namespace Infrastructure.Migrations
                 name: "Strategies",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuidv4()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     AdministrativeUnitId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
@@ -47,7 +49,7 @@ namespace Infrastructure.Migrations
                 name: "StrategicGoals",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuidv4()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     StrategyId = table.Column<Guid>(type: "uuid", nullable: false),
                     Label = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Number = table.Column<int>(type: "integer", nullable: false),
@@ -68,7 +70,7 @@ namespace Infrastructure.Migrations
                 name: "OperationalGoals",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuidv4()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     StrategicGoalId = table.Column<Guid>(type: "uuid", nullable: false),
                     Label = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Number = table.Column<int>(type: "integer", nullable: false),
@@ -89,7 +91,7 @@ namespace Infrastructure.Migrations
                 name: "ProgramTasks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuidv4()"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     OperationalGoalId = table.Column<Guid>(type: "uuid", nullable: false),
                     Label = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Number = table.Column<int>(type: "integer", nullable: false),

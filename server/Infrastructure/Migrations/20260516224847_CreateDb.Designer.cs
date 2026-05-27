@@ -30,7 +30,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasDefaultValueSql("uuidv4()");
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -51,7 +51,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasDefaultValueSql("uuidv4()");
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Label")
                         .IsRequired()
@@ -81,7 +81,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasDefaultValueSql("uuidv4()");
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -110,7 +110,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasDefaultValueSql("uuidv4()");
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Label")
                         .IsRequired()
@@ -140,7 +140,7 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasDefaultValueSql("uuidv4()");
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("AdministrativeUnitId")
                         .HasColumnType("uuid");

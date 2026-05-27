@@ -103,6 +103,6 @@ public class ApplicationDbContext : DbContext
         e.HasKey(x => x.Id);
 
         e.Property(x => x.Id)
-            .HasDefaultValueSql("uuidv4()");
+            .HasDefaultValueSql("gen_random_uuid()");
     }
 }
