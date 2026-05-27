@@ -1,8 +1,59 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
 import './HomePage.css'
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:5257'
+
 export function HomePage() {
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [status, setStatus] = useState('idle')
+  const [message, setMessage] = useState('')
+
+  const handleFileChange = (event) => {
+    setSelectedFile(event.target.files?.[0] ?? null)
+    setStatus('idle')
+    setMessage('')
+  }
+
+  const handleUpload = async (event) => {
+    event.preventDefault()
+    const form = event.currentTarget
+
+    if (!selectedFile) {
+      setStatus('error')
+      setMessage('Оберіть JSON-файл для завантаження.')
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('File', selectedFile)
+
+    setStatus('loading')
+    setMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/UploadFile`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.message ?? 'Не вдалося завантажити файл.')
+      }
+
+      setStatus('success')
+      setMessage('Файл успішно завантажено та оброблено.')
+      setSelectedFile(null)
+      form.reset()
+    } catch (error) {
+      setStatus('error')
+      setMessage(error.message)
+    }
+  }
+
   return (
     <main className="home">
       <section className="home-hero">
@@ -16,6 +67,36 @@ export function HomePage() {
           <Link className="btn btn--primary" to="/search">
             Перейти до пошуку
           </Link>
+        </Container>
+      </section>
+
+      <section className="home-section home-section--alt">
+        <Container>
+          <div className="upload-panel">
+            <div>
+              <h2>Завантажити стратегію</h2>
+              <p className="muted">
+                Додайте JSON-файл з даними громади, щоб зберегти його в каталозі.
+              </p>
+            </div>
+
+            <form className="upload-form" onSubmit={handleUpload}>
+              <label className="upload-form__field">
+                <span>Файл стратегії</span>
+                <input type="file" accept=".json,application/json" onChange={handleFileChange} />
+              </label>
+
+              <button className="btn btn--primary" type="submit" disabled={status === 'loading'}>
+                {status === 'loading' ? 'Завантаження...' : 'Завантажити файл'}
+              </button>
+
+              {message && (
+                <p className={`upload-form__message upload-form__message--${status}`}>
+                  {message}
+                </p>
+              )}
+            </form>
+          </div>
         </Container>
       </section>
 
