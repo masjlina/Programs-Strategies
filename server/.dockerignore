@@ -1,0 +1,11 @@
+bin
+obj
+.git
+.gitignore
+.vs
+.env
+.env.*
+*.user
+*.suo
+*.swp
+*.tmp
