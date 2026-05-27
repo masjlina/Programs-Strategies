@@ -45,25 +45,36 @@ function StrategyContent({ strategy }) {
 
 export function StrategyPage() {
   const { id } = useParams()
-  const catalogEntry = getCatalogEntryById(id ?? '')
 
+  const [catalogEntry, setCatalogEntry] = useState(null)
   const [loaded, setLoaded] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    if (!catalogEntry) {
-      setLoading(false)
+    if (!id) {
+      setNotFound(true)
       return
     }
 
     let cancelled = false
     setLoading(true)
     setError(null)
+    setNotFound(false)
 
-    loadStrategyForCatalogEntry(catalogEntry)
+    getCatalogEntryById(id)
+      .then((entry) => {
+        if (!entry) {
+          if (!cancelled) setNotFound(true)
+          return null
+        }
+
+        if (!cancelled) setCatalogEntry(entry)
+        return loadStrategyForCatalogEntry(entry)
+      })
       .then((data) => {
-        if (!cancelled) setLoaded(data)
+        if (!cancelled && data) setLoaded(data)
       })
       .catch((err) => {
         if (!cancelled) setError(err.message)
@@ -75,9 +86,9 @@ export function StrategyPage() {
     return () => {
       cancelled = true
     }
-  }, [catalogEntry])
+  }, [id])
 
-  if (!catalogEntry) {
+  if (notFound) {
     return (
       <main className="strategy-page strategy-page--centered">
         <Container>
@@ -86,6 +97,16 @@ export function StrategyPage() {
           <Link className="btn btn--tonal" to="/search">
             До пошуку
           </Link>
+        </Container>
+      </main>
+    )
+  }
+
+  if (!catalogEntry) {
+    return (
+      <main className="strategy-page strategy-page--centered">
+        <Container>
+          <p className="muted">Завантаження стратегії…</p>
         </Container>
       </main>
     )

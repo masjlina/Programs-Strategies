@@ -1,24 +1,174 @@
-import catalog from '../data/strategiesCatalog.json'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:5257'
 
-const unitModules = import.meta.glob('../data/administrative_units/*.json')
+let strategiesCache = null
+let unitsCache = null
+const strategyDetailsCache = new Map()
 
 function normalize(value) {
-  return value.trim().toLowerCase()
+  return String(value ?? '').trim().toLowerCase()
 }
 
-export function getCities() {
+async function apiGet(path) {
+  const response = await fetch(`${API_BASE_URL}${path}`)
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+function extractPeriod(title) {
+  const match = title?.match(/(20\d{2})\s*[–-]\s*(20\d{2})/)
+  if (!match) return ''
+  return `${match[1]}–${match[2]}`
+}
+
+function getStatus(period) {
+  const endYear = Number(period?.match(/20\d{2}\s*[–-]\s*(20\d{2})/)?.[1])
+  if (!endYear) return 'active'
+  return endYear < new Date().getFullYear() ? 'archive' : 'active'
+}
+
+function getCityFromUnitName(name) {
+  return name
+    ?.replace(/\s+міська територіальна громада$/i, '')
+    ?.replace(/\s+територіальна громада$/i, '')
+    ?.trim() || 'Невідома громада'
+}
+
+function normalizeTask(task) {
+  return {
+    ...task,
+    label: task.label ?? String(task.number ?? ''),
+    description: task.description ?? '',
+  }
+}
+
+function normalizeOperationalGoal(goal) {
+  const tasks = goal.tasks ?? goal.programTasks ?? []
+
+  return {
+    ...goal,
+    label: goal.label ?? String(goal.number ?? ''),
+    title: goal.title ?? '',
+    tasks: tasks.map(normalizeTask),
+    programTasks: tasks,
+  }
+}
+
+function normalizeStrategicGoal(goal) {
+  const operationalGoals = goal.operational_goals ?? goal.operationalGoals ?? []
+
+  return {
+    ...goal,
+    label: goal.label ?? String(goal.number ?? ''),
+    title: goal.title ?? '',
+    operational_goals: operationalGoals.map(normalizeOperationalGoal),
+    operationalGoals,
+  }
+}
+
+function normalizeStrategy(strategy) {
+  const strategicGoals = strategy.strategic_goals ?? strategy.strategicGoals ?? []
+
+  return {
+    ...strategy,
+    title: strategy.title ?? '',
+    strategic_goals: strategicGoals.map(normalizeStrategicGoal),
+    strategicGoals,
+  }
+}
+
+function getDirections(strategy) {
+  const directions = strategy.strategic_goals
+    .flatMap((strategicGoal) => strategicGoal.operational_goals)
+    .map((operationalGoal) => operationalGoal.title)
+    .filter(Boolean)
+
+  return [...new Set(directions)]
+}
+
+function buildCatalogEntry(strategy, unit) {
+  const normalizedStrategy = normalizeStrategy(strategy)
+  const period = extractPeriod(normalizedStrategy.title)
+  const directions = getDirections(normalizedStrategy)
+
+  return {
+    id: normalizedStrategy.id,
+    city: getCityFromUnitName(unit?.name),
+    unitId: normalizedStrategy.administrativeUnitId,
+    strategyId: normalizedStrategy.id,
+    title: normalizedStrategy.title,
+    period,
+    summary: unit?.name
+      ? `Стратегічний документ громади: ${unit.name}.`
+      : 'Стратегічний документ громади.',
+    directions,
+    status: getStatus(period),
+    fileUrl: '#',
+    officialSourceUrl: '#',
+  }
+}
+
+async function getUnitsMap() {
+  if (!unitsCache) {
+    unitsCache = apiGet('/api/AdministrativeUnits')
+  }
+
+  const units = await unitsCache
+  return new Map(units.map((unit) => [unit.id, unit]))
+}
+
+function getStrategyById(id) {
+  if (!strategyDetailsCache.has(id)) {
+    strategyDetailsCache.set(id, apiGet(`/api/Strategies/${id}`))
+  }
+
+  return strategyDetailsCache.get(id)
+}
+
+async function getCatalog() {
+  if (!strategiesCache) {
+    strategiesCache = Promise.all([
+      apiGet('/api/Strategies'),
+      getUnitsMap(),
+    ]).then(async ([strategies, unitsById]) => {
+      const fullStrategies = await Promise.all(
+        strategies.map((strategy) =>
+          getStrategyById(strategy.id).catch(() => strategy),
+        ),
+      )
+
+      return fullStrategies.map((strategy) =>
+        buildCatalogEntry(strategy, unitsById.get(strategy.administrativeUnitId)),
+      )
+    })
+  }
+
+  return strategiesCache
+}
+
+export async function getCities() {
+  const catalog = await getCatalog()
   const cities = [...new Set(catalog.map((item) => item.city))]
   return cities.sort((a, b) => a.localeCompare(b, 'uk'))
 }
 
-export function getDirections() {
+export async function getDirectionsList() {
+  const catalog = await getCatalog()
   const all = catalog.flatMap((item) => item.directions ?? [])
   return [...new Set(all)].sort((a, b) => a.localeCompare(b, 'uk'))
 }
 
-export function searchStrategies(query) {
+export { getDirectionsList as getDirections }
+
+export async function searchStrategies(query) {
   const q = normalize(query)
   if (!q) return []
+
+  const catalog = await getCatalog()
 
   return catalog.filter((item) => {
     const haystack = [
@@ -35,38 +185,45 @@ export function searchStrategies(query) {
   })
 }
 
-export function getCatalogEntryById(id) {
+export async function getCatalogEntryById(id) {
+  const catalog = await getCatalog()
   return catalog.find((item) => item.id === id) ?? null
 }
 
-export function getStrategiesByCity(city) {
+export async function getStrategiesByCity(city) {
   if (!city) return []
+  const catalog = await getCatalog()
   return catalog.filter((item) => item.city === city)
 }
 
-export async function loadAdministrativeUnit(unitDataFile) {
-  const loader = unitModules[`../data/administrative_units/${unitDataFile}.json`]
-  if (!loader) {
-    throw new Error(`Administrative unit file not found: ${unitDataFile}`)
+export async function loadAdministrativeUnit(unitId) {
+  const unitsById = await getUnitsMap()
+  const unit = unitsById.get(unitId)
+
+  if (!unit) {
+    throw new Error(`Administrative unit not found: ${unitId}`)
   }
-  const module = await loader()
-  return module.default
+
+  return { administrative_unit: unit }
 }
 
 export function getStrategyFromUnit(unitPayload, strategyId) {
-  const unit = unitPayload?.administrative_unit
-  if (!unit?.strategies) return null
-  return unit.strategies.find((s) => s.id === strategyId) ?? null
+  const strategies = unitPayload?.administrative_unit?.strategies
+  if (!strategies) return null
+  return strategies.find((strategy) => strategy.id === strategyId) ?? null
 }
 
 export async function loadStrategyForCatalogEntry(catalogEntry) {
-  const unitPayload = await loadAdministrativeUnit(catalogEntry.unitDataFile)
-  const strategy = getStrategyFromUnit(unitPayload, catalogEntry.strategyId)
-  if (!strategy) {
-    throw new Error(`Strategy not found: ${catalogEntry.strategyId}`)
-  }
+  const [strategyPayload, unitsById] = await Promise.all([
+    getStrategyById(catalogEntry.strategyId ?? catalogEntry.id),
+    getUnitsMap(),
+  ])
+
+  const strategy = normalizeStrategy(strategyPayload)
+  const unit = unitsById.get(strategy.administrativeUnitId ?? catalogEntry.unitId)
+
   return {
-    unit: unitPayload.administrative_unit,
+    unit,
     strategy,
   }
 }

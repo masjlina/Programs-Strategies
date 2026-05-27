@@ -46,7 +46,34 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(basePath, sharedXml));
 });
 
+var allowedOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin.Trim().TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+if (builder.Environment.IsDevelopment())
+{
+    allowedOrigins = allowedOrigins
+        .Concat(["http://localhost:5173"])
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}
+
+if (allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException("Missing CORS configuration. Set Cors:AllowedOrigins.");
+}
+
+builder.Services.AddCors(o => o.AddPolicy("ProgramsStrategies", policy =>
+{
+    policy.WithOrigins(allowedOrigins)
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials();
+}));
 var app = builder.Build();
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -54,6 +81,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("ProgramsStrategies");
 app.UseHttpsRedirection();
 app.MapControllers();
 

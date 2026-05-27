@@ -14,13 +14,11 @@ export function SearchPage() {
   const [selectedId, setSelectedId] = useState(null)
   const [loaded, setLoaded] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [searchError, setSearchError] = useState(null)
   const [previews, setPreviews] = useState({})
-
-  const results = useMemo(
-    () => (submittedQuery ? searchStrategies(submittedQuery) : []),
-    [submittedQuery],
-  )
+  const [results, setResults] = useState([])
 
   const selectedEntry = useMemo(
     () => results.find((item) => item.id === selectedId) ?? null,
@@ -33,6 +31,7 @@ export function SearchPage() {
     setSelectedId(null)
     setLoaded(null)
     setError(null)
+    setSearchError(null)
     setPreviews({})
   }
 
@@ -43,6 +42,33 @@ export function SearchPage() {
       return { ...prev, [entry.id]: data.strategy }
     })
   }, [])
+
+  useEffect(() => {
+    if (!submittedQuery) {
+      setResults([])
+      return
+    }
+
+    let cancelled = false
+    setSearchLoading(true)
+    setSearchError(null)
+    setResults([])
+
+    searchStrategies(submittedQuery)
+      .then((data) => {
+        if (!cancelled) setResults(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setSearchError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setSearchLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [submittedQuery])
 
   useEffect(() => {
     if (!results.length) return
@@ -111,7 +137,19 @@ export function SearchPage() {
           </p>
         )}
 
-        {submittedQuery && results.length === 0 && (
+        {searchLoading && (
+          <p className="search-hub__empty" role="status">
+            Завантаження результатів…
+          </p>
+        )}
+
+        {searchError && (
+          <p className="strategy-detail__error" role="alert">
+            {searchError}
+          </p>
+        )}
+
+        {submittedQuery && !searchLoading && !searchError && results.length === 0 && (
           <p className="search-hub__empty" role="status">
             За запитом «{submittedQuery}» нічого не знайдено.
           </p>
