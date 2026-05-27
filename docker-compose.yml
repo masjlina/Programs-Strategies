@@ -29,9 +29,6 @@ services:
       ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__ConnStr: Host=db;Port=5432;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD};Database=${POSTGRES_DB:-ProgramsStrategies}
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN}
-      Authentication__Schemes__Bearer__ValidIssuer: ${JWT_VALID_ISSUER:-programs-strategies-api}
-      Authentication__Schemes__Bearer__ValidAudiences__0: ${JWT_VALID_AUDIENCE:?Set JWT_VALID_AUDIENCE}
-      Authentication__Schemes__Bearer__SigningKeys__0__Value: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
     ports:
       - "8080:5000"
 

@@ -28,17 +28,6 @@ export function HomePage() {
           </p>
         </Container>
       </section>
-
-      <section id="contacts" className="home-section home-section--alt">
-        <Container>
-          <h2>Контакти</h2>
-          <p className="muted">
-            <a className="link" href="mailto:info@example.com">
-              info@example.com
-            </a>
-          </p>
-        </Container>
-      </section>
     </main>
   )
 }
