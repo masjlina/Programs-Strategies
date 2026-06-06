@@ -19,14 +19,14 @@ export function UploadPage() {
   const [error, setError] = useState(null)
 
   // Selection state
-  const [selectedType, setSelectedType] = useState('Community') // Region, District, Community
+  const [selectedType, setSelectedType] = useState('Community') // Region, Community
   const [selectedRegionId, setSelectedRegionId] = useState('')
   const [selectedDistrictId, setSelectedDistrictId] = useState('')
   const [selectedCommunityId, setSelectedCommunityId] = useState('')
 
   // Search filter for list of units without strategies
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState('Community') // Region, District, Community
+  const [activeTab, setActiveTab] = useState('Community') // Region, Community
 
   // File / Upload state
   const [dragActive, setDragActive] = useState(false)
@@ -67,7 +67,7 @@ export function UploadPage() {
           const qDistrictId = searchParams.get('districtId')
           const qCommunityId = searchParams.get('communityId')
 
-          if (qType) setSelectedType(qType)
+          if (qType && qType !== 'District') setSelectedType(qType)
           if (qRegionId) setSelectedRegionId(qRegionId)
           if (qDistrictId) setSelectedDistrictId(qDistrictId)
           if (qCommunityId) setSelectedCommunityId(qCommunityId)
@@ -444,7 +444,7 @@ export function UploadPage() {
         <header className="upload-page__hero">
           <h1 className="upload-page__title">Завантаження нових програм</h1>
           <p className="upload-page__subtitle muted">
-            Додайте стратегічний документ розвитку до обраної області, району або територіальної громади
+            Додайте стратегічний документ розвитку до обраної області або територіальної громади
           </p>
         </header>
 
@@ -470,12 +470,6 @@ export function UploadPage() {
                   onClick={() => setActiveTab('Community')}
                 >
                   Громади
-                </button>
-                <button
-                  className={`tab-menu__btn ${activeTab === 'District' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('District')}
-                >
-                  Райони
                 </button>
                 <button
                   className={`tab-menu__btn ${activeTab === 'Region' ? 'active' : ''}`}
@@ -504,7 +498,7 @@ export function UploadPage() {
                         onClick={() => handleQuickSelect(item)}
                       >
                         <span className="unit-name">{item.name}</span>
-                        <span className="unit-badge">{activeTab === 'Community' ? 'Громада' : activeTab === 'District' ? 'Район' : 'Область'}</span>
+                        <span className="unit-badge">{activeTab === 'Community' ? 'Громада' : 'Область'}</span>
                       </button>
                     </li>
                   ))
@@ -537,16 +531,6 @@ export function UploadPage() {
                         onChange={() => setSelectedType('Community')}
                       />
                       <span>Громада</span>
-                    </label>
-                    <label className={`level-radio-label ${selectedType === 'District' ? 'active' : ''}`}>
-                      <input
-                        type="radio"
-                        name="unitType"
-                        value="District"
-                        checked={selectedType === 'District'}
-                        onChange={() => setSelectedType('District')}
-                      />
-                      <span>Район</span>
                     </label>
                     <label className={`level-radio-label ${selectedType === 'Region' ? 'active' : ''}`}>
                       <input
