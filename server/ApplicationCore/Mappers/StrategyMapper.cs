@@ -16,8 +16,11 @@ public class StrategyMapper : IMapper<Strategy, StrategyDto>
         return new StrategyDto
         {
             Id = entity.Id,
-            AdministrativeUnitId = entity.AdministrativeUnitId,
+            RegionId = entity.RegionId,
+            DistrictId = entity.DistrictId,
+            CommunityId = entity.CommunityId,
             Title = entity.Title,
+            StrategyUrl = entity.StrategyUrl,
             StrategicGoals = entity.StrategicGoals.Select(_strategicGoalMapper.ToDto).ToList()
         };
     }
@@ -27,8 +30,11 @@ public class StrategyMapper : IMapper<Strategy, StrategyDto>
         return new Strategy
         {
             Id = dto.Id ?? Guid.Empty,
-            AdministrativeUnitId = dto.AdministrativeUnitId,
-            Title = dto.Title
+            RegionId = dto.RegionId,
+            DistrictId = dto.DistrictId,
+            CommunityId = dto.CommunityId,
+            Title = dto.Title,
+            StrategyUrl = dto.StrategyUrl
         };
     }
 }

@@ -1,0 +1,43 @@
+using ApplicationCore.Dtos;
+using ApplicationCore.Services.IServices;
+using Microsoft.AspNetCore.Mvc;
+
+namespace WebAPI.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class DistrictsController : ControllerBase
+{
+    private readonly ICrudService<DistrictDto> _service;
+
+    public DistrictsController(ICrudService<DistrictDto> service)
+    {
+        _service = service;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<DistrictDto>>> GetAll()
+    {
+        return Ok(await _service.GetAllAsync());
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<DistrictDto>> Create([FromBody] DistrictDto dto)
+    {
+        return Ok(await _service.CreateAsync(dto));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<DistrictDto>> Update(Guid id, [FromBody] DistrictDto dto)
+    {
+        dto.Id = id;
+        return Ok(await _service.UpdateAsync(dto));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.RemoveAsync(id);
+        return NoContent();
+    }
+}

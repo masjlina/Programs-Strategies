@@ -23,9 +23,9 @@ public class ParseService : IParseService
         PropertyNameCaseInsensitive = true
     };
 
-    public async Task<AdministrativeUnitDto> Parse<T>(T file)
+    public async Task<CommunityDto> Parse<T>(T file)
     {
-        if (file is AdministrativeUnitDto dto)
+        if (file is CommunityDto dto)
             return dto;
 
         if (file is IFormFile fileFile)
@@ -39,7 +39,7 @@ public class ParseService : IParseService
             {
                 using var stream = fileFile.OpenReadStream();
 
-                var parsedJson = await JsonSerializer.DeserializeAsync<AdministrativeUnitDto>(stream, JsonOptions);
+                var parsedJson = await JsonSerializer.DeserializeAsync<CommunityDto>(stream, JsonOptions);
 
                 if (parsedJson is null)
                     throw new InvalidDataException("Uploaded JSON is empty or invalid");
@@ -49,7 +49,7 @@ public class ParseService : IParseService
             catch (JsonException ex)
             {
                 throw new InvalidDataException(
-                    "Invalid JSON payload for AdministrativeUnit.",
+                    "Invalid JSON payload for Community.",
                     ex);
             }
         }
@@ -57,23 +57,36 @@ public class ParseService : IParseService
         throw new InvalidDataException("File type not supported");
     }
 
-    public async Task Save(AdministrativeUnitDto unitDto)
+    public async Task Save(CommunityDto communityDto)
     {
-        var isExist = await _dbContext.AdministrativeUnits
-            .AnyAsync(x => x.Name == unitDto.Name);
+        var isExist = await _dbContext.Communities
+            .AnyAsync(x => x.KattotgId == communityDto.KattotgId);
 
         if (isExist)
-            throw new Exception("The administrative unit already exists");
+            throw new Exception("The community already exists");
 
-        var entity = new AdministrativeUnit
+        var entity = new Community
         {
-            Name = unitDto.Name,
-            Type = unitDto.Type,
+            Id = communityDto.Id ?? Guid.Empty,
+            KattotgId = communityDto.KattotgId,
+            RegionId = communityDto.RegionId,
+            DistrictId = communityDto.DistrictId,
+            Name = communityDto.Name,
+            NameFull = communityDto.NameFull,
+            Category = communityDto.Category,
+            ImgUrl = communityDto.ImgUrl,
+            WebsiteUrl = communityDto.WebsiteUrl,
+            StrategiesUrl = communityDto.StrategiesUrl,
 
-            Strategies = unitDto.Strategies
+            Strategies = communityDto.Strategies
                 .Select(strategyDto => new Strategy
                 {
+                    Id = strategyDto.Id ?? Guid.Empty,
+                    RegionId = strategyDto.RegionId,
+                    DistrictId = strategyDto.DistrictId,
+                    CommunityId = strategyDto.CommunityId,
                     Title = strategyDto.Title,
+                    StrategyUrl = strategyDto.StrategyUrl,
 
                     StrategicGoals = strategyDto.StrategicGoals
                         .Select(goalDto => new StrategicGoal
@@ -105,7 +118,7 @@ public class ParseService : IParseService
                 .ToList()
         };
 
-        await _dbContext.AdministrativeUnits.AddAsync(entity);
+        await _dbContext.Communities.AddAsync(entity);
 
         await _dbContext.SaveChangesAsync();
     }

@@ -21,13 +21,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     )
 );
 
-builder.Services.AddScoped<IAdministrativeUnitService, AdministrativeUnitService>();
+builder.Services.AddScoped<ICrudService<RegionDto>, CrudService<Region, RegionDto>>();
+builder.Services.AddScoped<ICrudService<DistrictDto>, CrudService<District, DistrictDto>>();
+builder.Services.AddScoped<ICrudService<CommunityDto>, CrudService<Community, CommunityDto>>();
+builder.Services.AddScoped<ICrudService<SettlementDto>, CrudService<Settlement, SettlementDto>>();
 builder.Services.AddScoped<IStrategyService, StrategyService>();
 builder.Services.AddScoped<IStrategicGoalService, StrategicGoalService>();
 builder.Services.AddScoped<IOperationalGoalService, OperationalGoalService>();
 builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
-builder.Services.AddScoped<IMapper<AdministrativeUnit, AdministrativeUnitDto>, AdministrativeUnitMapper>();
+builder.Services.AddScoped<IMapper<Region, RegionDto>, RegionMapper>();
+builder.Services.AddScoped<IMapper<District, DistrictDto>, DistrictMapper>();
+builder.Services.AddScoped<IMapper<Community, CommunityDto>, CommunityMapper>();
+builder.Services.AddScoped<IMapper<Settlement, SettlementDto>, SettlementMapper>();
 builder.Services.AddScoped<IMapper<Strategy, StrategyDto>, StrategyMapper>();
 builder.Services.AddScoped<IMapper<StrategicGoal, StrategicGoalDto>, StrategicGoalMapper>();
 builder.Services.AddScoped<IMapper<OperationalGoal, OperationalGoalDto>, OperationalGoalMapper>();

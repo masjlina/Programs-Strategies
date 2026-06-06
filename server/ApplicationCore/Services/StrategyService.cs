@@ -64,8 +64,14 @@ public class StrategyService : IStrategyService
 
         if (strategyToUpdate.Title != dto.Title)
             strategyToUpdate.Title = dto.Title;
-        if (strategyToUpdate.AdministrativeUnitId != dto.AdministrativeUnitId)
-            strategyToUpdate.AdministrativeUnitId = dto.AdministrativeUnitId;
+        if (strategyToUpdate.RegionId != dto.RegionId)
+            strategyToUpdate.RegionId = dto.RegionId;
+        if (strategyToUpdate.DistrictId != dto.DistrictId)
+            strategyToUpdate.DistrictId = dto.DistrictId;
+        if (strategyToUpdate.CommunityId != dto.CommunityId)
+            strategyToUpdate.CommunityId = dto.CommunityId;
+        if (strategyToUpdate.StrategyUrl != dto.StrategyUrl)
+            strategyToUpdate.StrategyUrl = dto.StrategyUrl;
 
         await _dbContext.SaveChangesAsync();
         return _mapper.ToDto(strategyToUpdate);
