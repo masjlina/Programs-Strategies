@@ -70,36 +70,6 @@ export function HomePage() {
         </Container>
       </section>
 
-      <section className="home-section home-section--alt">
-        <Container>
-          <div className="upload-panel">
-            <div>
-              <h2>Завантажити стратегію</h2>
-              <p className="muted">
-                Додайте JSON-файл з даними громади, щоб зберегти його в каталозі.
-              </p>
-            </div>
-
-            <form className="upload-form" onSubmit={handleUpload}>
-              <label className="upload-form__field">
-                <span>Файл стратегії</span>
-                <input type="file" accept=".json,application/json" onChange={handleFileChange} />
-              </label>
-
-              <button className="btn btn--primary" type="submit" disabled={status === 'loading'}>
-                {status === 'loading' ? 'Завантаження...' : 'Завантажити файл'}
-              </button>
-
-              {message && (
-                <p className={`upload-form__message upload-form__message--${status}`}>
-                  {message}
-                </p>
-              )}
-            </form>
-          </div>
-        </Container>
-      </section>
-
       <section id="about" className="home-section">
         <Container>
           <h2>Про сайт</h2>
