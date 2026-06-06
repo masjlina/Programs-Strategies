@@ -30,6 +30,7 @@ builder.Services.AddScoped<IStrategicGoalService, StrategicGoalService>();
 builder.Services.AddScoped<IOperationalGoalService, OperationalGoalService>();
 builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
+builder.Services.AddScoped<IOfficialDataImportService, OfficialDataImportService>();
 builder.Services.AddScoped<IMapper<Region, RegionDto>, RegionMapper>();
 builder.Services.AddScoped<IMapper<District, DistrictDto>, DistrictMapper>();
 builder.Services.AddScoped<IMapper<Community, CommunityDto>, CommunityMapper>();

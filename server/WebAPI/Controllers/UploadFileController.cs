@@ -12,10 +12,14 @@ namespace WebAPI.Controllers;
 public class UploadFileController : ControllerBase
 {
     private readonly IParseService _parseService;
+    private readonly IOfficialDataImportService _officialDataImportService;
 
-    public UploadFileController(IParseService parseService)
+    public UploadFileController(
+        IParseService parseService,
+        IOfficialDataImportService officialDataImportService)
     {
         _parseService = parseService;
+        _officialDataImportService = officialDataImportService;
     }
 
     /// <summary>
@@ -33,6 +37,30 @@ public class UploadFileController : ControllerBase
             var parsed = await _parseService.Parse(request.File);
             await _parseService.Save(parsed);
             return Ok(parsed);
+        }
+        catch (InvalidDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Imports official Ukrainian administrative data from official-data.csv.
+    /// </summary>
+    /// <param name="request">Multipart request containing official-data.csv.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <response code="200">CSV imported successfully.</response>
+    /// <response code="400">Uploaded CSV is invalid or cannot be imported.</response>
+    [HttpPost("official-data")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> ImportOfficialData(
+        [FromForm] UploadFileRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _officialDataImportService.ImportAsync(request.File, cancellationToken);
+            return Ok(result);
         }
         catch (InvalidDataException ex)
         {
