@@ -73,8 +73,8 @@ export function StrategyDetailPanel({ catalogEntry, loaded, loading, error }) {
         </div>
       </header>
 
-      <StrategyDashboard metrics={metrics} directionLabel={directionLabel} />
-      <StrategyMeasuresTable rows={measureRows} />
+      {/*<StrategyDashboard metrics={metrics} directionLabel={directionLabel} />*/}
+      {/*<StrategyMeasuresTable rows={measureRows} />*/}
       <StrategyGoalsTree strategy={strategy} />
     </div>
   )

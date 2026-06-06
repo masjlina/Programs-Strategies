@@ -23,7 +23,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<ICrudService<RegionDto>, CrudService<Region, RegionDto>>();
 builder.Services.AddScoped<ICrudService<DistrictDto>, CrudService<District, DistrictDto>>();
-builder.Services.AddScoped<ICrudService<CommunityDto>, CrudService<Community, CommunityDto>>();
+builder.Services.AddScoped<ICrudService<CommunityDto>, CommunityService>();
 builder.Services.AddScoped<ICrudService<SettlementDto>, CrudService<Settlement, SettlementDto>>();
 builder.Services.AddScoped<IStrategyService, StrategyService>();
 builder.Services.AddScoped<IStrategicGoalService, StrategicGoalService>();

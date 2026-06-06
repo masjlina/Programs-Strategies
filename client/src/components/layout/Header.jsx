@@ -15,6 +15,9 @@ export function Header() {
           <NavLink className="site-nav__link" to="/search">
             Пошук
           </NavLink>
+          <NavLink className="site-nav__link" to="/upload">
+            Завантаження
+          </NavLink>
         </nav>
       </Container>
     </header>

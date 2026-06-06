@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './StrategyGoalsTree.css'
 
 const collator = new Intl.Collator('uk', {
   numeric: true,

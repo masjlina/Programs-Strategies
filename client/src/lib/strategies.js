@@ -94,11 +94,12 @@ function buildCatalogEntry(strategy, unit) {
   const normalizedStrategy = normalizeStrategy(strategy)
   const period = extractPeriod(normalizedStrategy.title)
   const directions = getDirections(normalizedStrategy)
+  const unitId = normalizedStrategy.communityId ?? normalizedStrategy.districtId ?? normalizedStrategy.regionId
 
   return {
     id: normalizedStrategy.id,
     city: getCityFromUnitName(unit?.name),
-    unitId: normalizedStrategy.administrativeUnitId,
+    unitId: unitId,
     strategyId: normalizedStrategy.id,
     title: normalizedStrategy.title,
     period,
@@ -114,7 +115,17 @@ function buildCatalogEntry(strategy, unit) {
 
 async function getUnitsMap() {
   if (!unitsCache) {
-    unitsCache = apiGet('/api/AdministrativeUnits')
+    unitsCache = Promise.all([
+      apiGet('/api/Regions'),
+      apiGet('/api/Districts'),
+      apiGet('/api/Communities'),
+    ]).then(([regions, districts, communities]) => {
+      const allUnits = []
+      regions.forEach(r => allUnits.push({ id: r.id, name: r.nameFull || r.name, type: 'Region' }))
+      districts.forEach(d => allUnits.push({ id: d.id, name: d.nameFull || d.name, type: 'District' }))
+      communities.forEach(c => allUnits.push({ id: c.id, name: c.nameFull || c.name, type: 'Community' }))
+      return allUnits
+    })
   }
 
   const units = await unitsCache
@@ -141,9 +152,10 @@ async function getCatalog() {
         ),
       )
 
-      return fullStrategies.map((strategy) =>
-        buildCatalogEntry(strategy, unitsById.get(strategy.administrativeUnitId)),
-      )
+      return fullStrategies.map((strategy) => {
+        const unitId = strategy.communityId ?? strategy.districtId ?? strategy.regionId
+        return buildCatalogEntry(strategy, unitsById.get(unitId))
+      })
     })
   }
 

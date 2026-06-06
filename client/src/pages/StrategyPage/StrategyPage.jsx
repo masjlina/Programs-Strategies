@@ -1,47 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import CollapsibleBlock from '../../components/CollapsibleBlock/CollapsibleBlock.jsx'
+import { StrategyGoalsTree } from '../../components/search/StrategyGoalsTree.jsx'
 import { Container } from '../../components/layout/Container.jsx'
 import {
   getCatalogEntryById,
   loadStrategyForCatalogEntry,
 } from '../../lib/strategies.js'
 import './StrategyPage.css'
-
-function StrategyContent({ strategy }) {
-  return (
-    <>
-      {strategy.strategic_goals.map((strategicGoal) => (
-        <CollapsibleBlock
-          key={strategicGoal.id}
-          title={`Стратегічна ціль ${strategicGoal.label}. ${strategicGoal.title}`}
-          defaultOpen={false}
-        >
-          {strategicGoal.operational_goals.map((operationalGoal) => (
-            <div
-              key={operationalGoal.id}
-              className="strategy-page__operational-goal"
-            >
-              <CollapsibleBlock
-                title={`Оперативна ціль ${operationalGoal.label}. ${operationalGoal.title}`}
-              >
-                {operationalGoal.tasks.map((task) => (
-                  <div key={task.id} className="strategy-page__task">
-                    <CollapsibleBlock title={`Завдання ${task.label}`}>
-                      <p className="strategy-page__task-description">
-                        {task.description}
-                      </p>
-                    </CollapsibleBlock>
-                  </div>
-                ))}
-              </CollapsibleBlock>
-            </div>
-          ))}
-        </CollapsibleBlock>
-      ))}
-    </>
-  )
-}
 
 export function StrategyPage() {
   const { id } = useParams()
@@ -176,7 +141,7 @@ export function StrategyPage() {
 
         {loading && <p className="muted">Завантаження стратегії…</p>}
         {error && <p className="strategy-page__error">{error}</p>}
-        {strategy && <StrategyContent strategy={strategy} />}
+        {strategy && <StrategyGoalsTree strategy={strategy} />}
       </Container>
     </main>
   )

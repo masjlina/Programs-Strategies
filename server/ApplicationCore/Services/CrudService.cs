@@ -11,8 +11,8 @@ public class CrudService<TEntity, TDto> : ICrudService<TDto>
     where TEntity : BaseEntity
     where TDto : BaseDto
 {
-    private readonly ApplicationDbContext _dbContext;
-    private readonly IMapper<TEntity, TDto> _mapper;
+    protected readonly ApplicationDbContext _dbContext;
+    protected readonly IMapper<TEntity, TDto> _mapper;
 
     public CrudService(
         ApplicationDbContext dbContext,

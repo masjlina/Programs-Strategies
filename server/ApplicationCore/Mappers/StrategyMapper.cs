@@ -34,7 +34,8 @@ public class StrategyMapper : IMapper<Strategy, StrategyDto>
             DistrictId = dto.DistrictId,
             CommunityId = dto.CommunityId,
             Title = dto.Title,
-            StrategyUrl = dto.StrategyUrl
+            StrategyUrl = dto.StrategyUrl,
+            StrategicGoals = dto.StrategicGoals.Select(_strategicGoalMapper.ToEntity).ToList()
         };
     }
 }

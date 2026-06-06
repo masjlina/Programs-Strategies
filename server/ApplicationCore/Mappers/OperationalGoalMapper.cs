@@ -32,7 +32,8 @@ public class OperationalGoalMapper : IMapper<OperationalGoal, OperationalGoalDto
             StrategicGoalId = dto.StrategicGoalId,
             Label = dto.Label,
             Number = dto.Number,
-            Title = dto.Title
+            Title = dto.Title,
+            ProgramTasks = dto.ProgramTasks.Select(_programTaskMapper.ToEntity).ToList()
         };
     }
 }
