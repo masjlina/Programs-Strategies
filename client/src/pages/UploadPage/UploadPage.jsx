@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
+import { StrategyGoalsTree } from '../../components/search/StrategyGoalsTree.jsx'
+import { normalizeStrategy } from '../../lib/strategies.js'
 import './UploadPage.css'
 
 const API_BASE_URL =
@@ -316,9 +318,32 @@ export function UploadPage() {
     }))
   }
 
+  // Validate URL format on frontend
+  const validateFrontendUrl = (url) => {
+    if (!url || url.trim() === '') return true
+    try {
+      const parsed = new URL(url)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+    } catch (e) {
+      return false
+    }
+  }
+
   // Submit parsed strategy
   const handleSave = async () => {
     if (!parsedStrategy) return
+
+    if (!parsedStrategy.title?.trim()) {
+      setSaveStatus('error')
+      setSaveMessage('Назва програми не може бути порожньою.')
+      return
+    }
+
+    if (parsedStrategy.strategyUrl && !validateFrontendUrl(parsedStrategy.strategyUrl)) {
+      setSaveStatus('error')
+      setSaveMessage('Некоректний формат URL для програми. URL має починатися з http:// або https://')
+      return
+    }
 
     let targetId = null
     if (selectedType === 'Region') {
@@ -674,71 +699,43 @@ export function UploadPage() {
                       <span className="summary-label">Об’єкт прив’язки:</span>
                       <strong className="summary-value highlight-text">{selectedUnitName}</strong>
                     </div>
-                    <div className="summary-item">
-                      <span className="summary-label">Назва програми:</span>
-                      <strong className="summary-value">{parsedStrategy.title}</strong>
-                    </div>
                   </div>
 
+                  <div className="editable-section" style={{ marginTop: '16px', marginBottom: '20px' }}>
+                    <div className="form-group">
+                      <label className="form-label highlight-label" htmlFor="upload-title-input">
+                        Назва програми
+                      </label>
+                      <input
+                        id="upload-title-input"
+                        className="form-input"
+                        type="text"
+                        value={parsedStrategy.title}
+                        onChange={(e) => setParsedStrategy(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Введіть назву програми розвитку"
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginTop: '12px' }}>
+                      <label className="form-label highlight-label" htmlFor="upload-url-input">
+                        Посилання на оригінал програми (URL)
+                      </label>
+                      <input
+                        id="upload-url-input"
+                        className="form-input"
+                        type="text"
+                        value={parsedStrategy.strategyUrl || ''}
+                        onChange={(e) => setParsedStrategy(prev => ({ ...prev, strategyUrl: e.target.value }))}
+                        placeholder="Введіть URL, наприклад: https://example.com/strategy.pdf"
+                      />
+                    </div>
+                  </div>
                   <div className="tree-container">
                     <div className="tree-header">Структура програми</div>
-                    <div className="tree-body">
-                      {parsedStrategy.strategicGoals.length > 0 ? (
-                        parsedStrategy.strategicGoals.map((sg, sgi) => {
-                          const sgKey = `sg-${sgi}`
-                          const isSgExpanded = expandedGoals[sgKey] ?? true
-
-                          return (
-                            <div key={sgKey} className="tree-node tree-node--level-1">
-                              <div className="tree-node__header" onClick={() => toggleGoal(sgKey)}>
-                                <span className={`chevron ${isSgExpanded ? 'expanded' : ''}`}>▶</span>
-                                <span className="node-badge node-badge--strategic">Стратегічна ціль {sg.label}</span>
-                                <span className="node-title">{sg.title}</span>
-                              </div>
-
-                              {isSgExpanded && (
-                                <div className="tree-node__children">
-                                  {sg.operationalGoals.length > 0 ? (
-                                    sg.operationalGoals.map((og, ogi) => {
-                                      const ogKey = `og-${sgi}-${ogi}`
-                                      const isOgExpanded = expandedGoals[ogKey] ?? false
-
-                                      return (
-                                        <div key={ogKey} className="tree-node tree-node--level-2">
-                                          <div className="tree-node__header" onClick={() => toggleGoal(ogKey)}>
-                                            <span className={`chevron ${isOgExpanded ? 'expanded' : ''}`}>▶</span>
-                                            <span className="node-badge node-badge--operational">Операційна ціль {og.label}</span>
-                                            <span className="node-title">{og.title}</span>
-                                          </div>
-
-                                          {isOgExpanded && (
-                                            <div className="tree-node__children">
-                                              {og.programTasks.length > 0 ? (
-                                                og.programTasks.map((t, ti) => (
-                                                  <div key={`t-${sgi}-${ogi}-${ti}`} className="tree-node tree-node--leaf">
-                                                    <span className="leaf-dot">•</span>
-                                                    <span className="node-badge node-badge--task">Завдання {t.label}</span>
-                                                    <span className="node-desc">{t.description}</span>
-                                                  </div>
-                                                ))
-                                              ) : (
-                                                <div className="tree-node__empty muted">Завдання відсутні</div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    })
-                                  ) : (
-                                    <div className="tree-node__empty muted">Операційні цілі відсутні</div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })
+                    <div className="tree-body" style={{ maxHeight: 'none', overflowY: 'visible', padding: 0 }}>
+                      {parsedStrategy.strategicGoals && parsedStrategy.strategicGoals.length > 0 ? (
+                        <StrategyGoalsTree strategy={normalizeStrategy(parsedStrategy)} />
                       ) : (
-                        <div className="tree-empty muted">Стратегічні цілі відсутні у цьому файлі.</div>
+                        <div className="tree-empty muted" style={{ padding: '20px' }}>Стратегічні цілі відсутні у цьому файлі.</div>
                       )}
                     </div>
                   </div>
@@ -747,7 +744,7 @@ export function UploadPage() {
                     <button
                       className="btn btn--primary"
                       onClick={handleSave}
-                      disabled={saving}
+                      disabled={saving || !parsedStrategy.title?.trim()}
                     >
                       {saving ? 'Збереження...' : 'Зберегти програму'}
                     </button>

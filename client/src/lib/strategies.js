@@ -70,7 +70,7 @@ function normalizeStrategicGoal(goal) {
   }
 }
 
-function normalizeStrategy(strategy) {
+export function normalizeStrategy(strategy) {
   const strategicGoals = strategy.strategic_goals ?? strategy.strategicGoals ?? []
 
   return {

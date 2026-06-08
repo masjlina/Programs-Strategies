@@ -459,3 +459,106 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* Programs Management Section */
+.programs-section {
+  margin-top: 36px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.programs-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.program-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.program-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.program-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.program-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-h);
+  line-height: 1.4;
+}
+
+.program-card__url {
+  font-size: 0.85rem;
+  color: var(--accent-strong);
+  text-decoration: none;
+  word-break: break-all;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.program-card__url:hover {
+  text-decoration: underline;
+}
+
+.program-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.program-card__edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn--sm {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+.btn--danger-tonal {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.btn--danger-tonal:hover {
+  background: #fecaca;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+.admin-page__status, .admin-page__error-banner {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+}
+
+.admin-page__error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: var(--radius);
+}

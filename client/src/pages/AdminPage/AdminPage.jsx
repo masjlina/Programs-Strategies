@@ -18,6 +18,7 @@ export function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [websiteUrlFilter, setWebsiteUrlFilter] = useState('all') // 'all', 'filled', 'empty'
   const [strategiesUrlFilter, setStrategiesUrlFilter] = useState('all') // 'all', 'filled', 'empty'
+  const [hasStrategiesFilter, setHasStrategiesFilter] = useState('all') // 'all', 'yes', 'no'
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -30,6 +31,12 @@ export function AdminPage() {
   const [strategiesUrlError, setStrategiesUrlError] = useState('')
   const [websiteUrlError, setWebsiteUrlError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Strategy editing state
+  const [editingStrategyId, setEditingStrategyId] = useState(null)
+  const [editStrategyTitle, setEditStrategyTitle] = useState('')
+  const [editStrategyUrl, setEditStrategyUrl] = useState('')
+  const [savingStrategyId, setSavingStrategyId] = useState(null)
 
   // Toast notification state
   const [toasts, setToasts] = useState([])
@@ -115,16 +122,23 @@ export function AdminPage() {
       list = list.filter((item) => !item.strategiesUrl || item.strategiesUrl.trim() === '')
     }
 
+    // Filter by program availability (strategies list)
+    if (hasStrategiesFilter === 'yes') {
+      list = list.filter((item) => item.strategies && item.strategies.length > 0)
+    } else if (hasStrategiesFilter === 'no') {
+      list = list.filter((item) => !item.strategies || item.strategies.length === 0)
+    }
+
     // Sort alphabetically by name
     list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uk'))
 
     return list
-  }, [activeType, regions, communities, selectedRegionFilterId, searchQuery, websiteUrlFilter, strategiesUrlFilter])
+  }, [activeType, regions, communities, selectedRegionFilterId, searchQuery, websiteUrlFilter, strategiesUrlFilter, hasStrategiesFilter])
 
   // Reset pagination when filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeType, selectedRegionFilterId, searchQuery, websiteUrlFilter, strategiesUrlFilter])
+  }, [activeType, selectedRegionFilterId, searchQuery, websiteUrlFilter, strategiesUrlFilter, hasStrategiesFilter])
 
   // Paginated List
   const paginatedUnits = useMemo(() => {
@@ -141,6 +155,163 @@ export function AdminPage() {
     setWebsiteUrlInput(unit.websiteUrl || '')
     setStrategiesUrlError('')
     setWebsiteUrlError('')
+    setEditingStrategyId(null)
+    setEditStrategyTitle('')
+    setEditStrategyUrl('')
+  }
+
+  // Start editing a strategy
+  const startEditStrategy = (strategy) => {
+    setEditingStrategyId(strategy.id)
+    setEditStrategyTitle(strategy.title || '')
+    setEditStrategyUrl(strategy.strategyUrl || '')
+  }
+
+  // Cancel editing a strategy
+  const cancelEditStrategy = () => {
+    setEditingStrategyId(null)
+    setEditStrategyTitle('')
+    setEditStrategyUrl('')
+  }
+
+  // Delete a strategy
+  const handleStrategyDelete = async (strategyId) => {
+    if (!window.confirm('Ви впевнені, що хочете видалити цю програму?')) return
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/Strategies/${strategyId}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error('Не вдалося видалити програму')
+      }
+
+      // Update selectedUnit strategies
+      setSelectedUnit((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          strategies: (prev.strategies || []).filter((s) => s.id !== strategyId),
+        }
+      })
+
+      // Update regions or communities array
+      if (activeType === 'Region') {
+        setRegions((prev) =>
+          prev.map((r) => {
+            if (r.id === selectedUnit.id) {
+              return {
+                ...r,
+                strategies: (r.strategies || []).filter((s) => s.id !== strategyId),
+              }
+            }
+            return r
+          })
+        )
+      } else {
+        setCommunities((prev) =>
+          prev.map((c) => {
+            if (c.id === selectedUnit.id) {
+              return {
+                ...c,
+                strategies: (c.strategies || []).filter((s) => s.id !== strategyId),
+              }
+            }
+            return c
+          })
+        )
+      }
+
+      showToast('Програму успішно видалено', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast(err.message || 'Помилка при видаленні програми', 'error')
+    }
+  }
+
+  // Save updated strategy
+  const handleStrategyUpdate = async (strategyId) => {
+    if (!editStrategyTitle.trim()) {
+      showToast('Назва програми не може бути порожньою', 'error')
+      return
+    }
+
+    if (editStrategyUrl && !validateFrontendUrl(editStrategyUrl)) {
+      showToast('Некоректний формат URL програми', 'error')
+      return
+    }
+
+    setSavingStrategyId(strategyId)
+    try {
+      const payload = {
+        id: strategyId,
+        communityId: activeType === 'Community' ? selectedUnit.id : null,
+        regionId: activeType === 'Region' ? selectedUnit.id : null,
+        title: editStrategyTitle,
+        strategyUrl: editStrategyUrl || null,
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/Strategies/${strategyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.message || 'Не вдалося оновити програму')
+      }
+
+      const updatedStrategy = await response.json()
+
+      // Update selectedUnit strategies
+      setSelectedUnit((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          strategies: (prev.strategies || []).map((s) => (s.id === strategyId ? updatedStrategy : s)),
+        }
+      })
+
+      // Update regions or communities array
+      if (activeType === 'Region') {
+        setRegions((prev) =>
+          prev.map((r) => {
+            if (r.id === selectedUnit.id) {
+              return {
+                ...r,
+                strategies: (r.strategies || []).map((s) => (s.id === strategyId ? updatedStrategy : s)),
+              }
+            }
+            return r
+          })
+        )
+      } else {
+        setCommunities((prev) =>
+          prev.map((c) => {
+            if (c.id === selectedUnit.id) {
+              return {
+                ...c,
+                strategies: (c.strategies || []).map((s) => (s.id === strategyId ? updatedStrategy : s)),
+              }
+            }
+            return c
+          })
+        )
+      }
+
+      setEditingStrategyId(null)
+      setEditStrategyTitle('')
+      setEditStrategyUrl('')
+      showToast('Програму успішно оновлено', 'success')
+    } catch (err) {
+      console.error(err)
+      showToast(err.message || 'Помилка при оновленні програми', 'error')
+    } finally {
+      setSavingStrategyId(null)
+    }
   }
 
   // Validate URL format on frontend
@@ -396,6 +567,19 @@ export function AdminPage() {
                     <option value="empty">Посилання на програми: Не заповнено</option>
                   </select>
                 </div>
+                {/* Has Uploaded Programs filter */}
+                <div className="filter-field">
+                  <select
+                    className="form-select sidebar-select"
+                    value={hasStrategiesFilter}
+                    onChange={(e) => setHasStrategiesFilter(e.target.value)}
+                    aria-label="Фільтр наявності програм"
+                  >
+                    <option value="all">Завантажені програми: Всі</option>
+                    <option value="yes">Завантажені програми: Є</option>
+                    <option value="no">Завантажені програми: Немає</option>
+                  </select>
+                </div>
               </div>
 
 
@@ -636,6 +820,104 @@ export function AdminPage() {
                       </button>
                     </div>
                   </form>
+
+                  <div className="programs-section">
+                    <h3 className="section-subtitle accent-title">
+                      {activeType === 'Community' ? 'Програми розвитку громади' : 'Програми розвитку області'} ({selectedUnit.strategies?.length || 0})
+                    </h3>
+                    {selectedUnit.strategies && selectedUnit.strategies.length > 0 ? (
+                      <ul className="programs-list">
+                        {selectedUnit.strategies.map((strategy) => {
+                          const isEditing = editingStrategyId === strategy.id
+                          const isSaving = savingStrategyId === strategy.id
+
+                          return (
+                            <li key={strategy.id} className="program-card">
+                              {isEditing ? (
+                                <div className="program-card__edit-form">
+                                  <div className="form-group">
+                                    <label className="form-label" htmlFor={`edit-title-${strategy.id}`}>Назва програми</label>
+                                    <input
+                                      id={`edit-title-${strategy.id}`}
+                                      className="form-input"
+                                      type="text"
+                                      value={editStrategyTitle}
+                                      onChange={(e) => setEditStrategyTitle(e.target.value)}
+                                      disabled={isSaving}
+                                    />
+                                  </div>
+                                  <div className="form-group">
+                                    <label className="form-label" htmlFor={`edit-url-${strategy.id}`}>Посилання на програму (URL)</label>
+                                    <input
+                                      id={`edit-url-${strategy.id}`}
+                                      className="form-input"
+                                      type="text"
+                                      value={editStrategyUrl}
+                                      onChange={(e) => setEditStrategyUrl(e.target.value)}
+                                      disabled={isSaving}
+                                      placeholder="Введіть URL, наприклад: https://example.com/strategy.pdf"
+                                    />
+                                  </div>
+                                  <div className="program-card__actions">
+                                    <button
+                                      type="button"
+                                      className="btn btn--primary btn--sm"
+                                      onClick={() => handleStrategyUpdate(strategy.id)}
+                                      disabled={isSaving || !editStrategyTitle.trim()}
+                                    >
+                                      {isSaving ? 'Збереження...' : 'Зберегти'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn--ghost btn--sm"
+                                      onClick={cancelEditStrategy}
+                                      disabled={isSaving}
+                                    >
+                                      Скасувати
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="program-card__info">
+                                    <span className="program-card__title">{strategy.title}</span>
+                                    {strategy.strategyUrl && (
+                                      <a
+                                        href={strategy.strategyUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="program-card__url"
+                                      >
+                                        🔗 {strategy.strategyUrl}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="program-card__actions">
+                                    <button
+                                      type="button"
+                                      className="btn btn--tonal btn--sm"
+                                      onClick={() => startEditStrategy(strategy)}
+                                    >
+                                      Редагувати
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn--danger-tonal btn--sm"
+                                      onClick={() => handleStrategyDelete(strategy.id)}
+                                    >
+                                      Видалити
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="muted">Немає завантажених програм розвитку.</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="card-panel empty-detail-panel">
