@@ -18,6 +18,9 @@ export function Header() {
           <NavLink className="site-nav__link" to="/upload">
             Завантаження
           </NavLink>
+          <NavLink className="site-nav__link" to="/admin">
+            Адмін-панель
+          </NavLink>
         </nav>
       </Container>
     </header>

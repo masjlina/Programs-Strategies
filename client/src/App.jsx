@@ -4,6 +4,7 @@ import { HomePage } from './pages/HomePage/HomePage.jsx'
 import { SearchPage } from './pages/SearchPage/SearchPage.jsx'
 import { StrategyPage } from './pages/StrategyPage/StrategyPage.jsx'
 import { UploadPage } from './pages/UploadPage/UploadPage.jsx'
+import { AdminPage } from './pages/AdminPage/AdminPage.jsx'
 import './App.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="search" element={<SearchPage />} />
           <Route path="strategies/:id" element={<StrategyPage />} />
           <Route path="upload" element={<UploadPage />} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
