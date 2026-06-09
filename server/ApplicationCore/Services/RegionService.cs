@@ -7,20 +7,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ApplicationCore.Services;
 
-public class CommunityService : CrudService<Community, CommunityDto>, ICrudService<CommunityDto>
+public class RegionService : CrudService<Region, RegionDto>, ICrudService<RegionDto>
 {
-    public CommunityService(
+    public RegionService(
         ApplicationDbContext dbContext,
-        IMapper<Community, CommunityDto> mapper)
+        IMapper<Region, RegionDto> mapper)
         : base(dbContext, mapper)
     {
     }
 
-    public new async Task<List<CommunityDto>> GetAllAsync()
+    public new async Task<List<RegionDto>> GetAllAsync()
     {
-        var entities = await _dbContext.Communities
+        var entities = await _dbContext.Regions
             .Include(x => x.Strategies)
-            .Include(x => x.Settlements)
             .ToListAsync();
         return entities.Select(_mapper.ToDto).ToList();
     }
