@@ -524,14 +524,15 @@ export function AdminPage() {
 
                 {/* Region Dropdown filter (only for communities) */}
                 {activeType === 'Community' && (
-                  <div className="filter-field">
+                  <div className="form-group">
+                      <label className="form-label">Область</label>
                     <select
                       className="form-select sidebar-select"
                       value={selectedRegionFilterId}
                       onChange={(e) => setSelectedRegionFilterId(e.target.value)}
                       aria-label="Фільтр за областю"
                     >
-                      <option value="">Всі області (без фільтру)</option>
+                      <option value="">Всі області</option>
                       {regions.map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.nameFull || r.name}
@@ -542,42 +543,46 @@ export function AdminPage() {
                 )}
 
                 {/* Website URL filter */}
-                <div className="filter-field">
-                  <select
+                <div className="form-group">
+                    <label className="form-label">Посилання на сайт</label>
+
+                    <select
                     className="form-select sidebar-select"
                     value={websiteUrlFilter}
                     onChange={(e) => setWebsiteUrlFilter(e.target.value)}
                     aria-label="Фільтр офіційного сайту"
                   >
-                    <option value="all">Посилання на сайт: Всі</option>
-                    <option value="filled">Посилання на сайт: Заповнено</option>
-                    <option value="empty">Посилання на сайт: Не заповнено</option>
+                    <option value="all">Без фільтру</option>
+                    <option value="filled">Заповнено</option>
+                    <option value="empty">Не заповнено</option>
                   </select>
                 </div>
                 {/* Strategies URL filter */}
-                <div className="filter-field">
-                  <select
+                <div className="form-group">
+                    <label className="form-label">Посилання на програму</label>
+                    <select
                     className="form-select sidebar-select"
                     value={strategiesUrlFilter}
                     onChange={(e) => setStrategiesUrlFilter(e.target.value)}
                     aria-label="Фільтр стратегій"
                   >
-                    <option value="all">Посилання на програми: Всі</option>
-                    <option value="filled">Посилання на програми: Заповнено</option>
-                    <option value="empty">Посилання на програми: Не заповнено</option>
+                    <option value="all">Без фільтру</option>
+                    <option value="filled">Заповнено</option>
+                    <option value="empty">Не заповнено</option>
                   </select>
                 </div>
                 {/* Has Uploaded Programs filter */}
-                <div className="filter-field">
-                  <select
+                <div className="form-group">
+                    <label className="form-label">Програми</label>
+                    <select
                     className="form-select sidebar-select"
                     value={hasStrategiesFilter}
                     onChange={(e) => setHasStrategiesFilter(e.target.value)}
                     aria-label="Фільтр наявності програм"
                   >
-                    <option value="all">Завантажені програми: Всі</option>
-                    <option value="yes">Завантажені програми: Є</option>
-                    <option value="no">Завантажені програми: Немає</option>
+                    <option value="all">Без фільтру</option>
+                    <option value="yes">Є</option>
+                    <option value="no">Немає</option>
                   </select>
                 </div>
               </div>
@@ -730,10 +735,10 @@ export function AdminPage() {
                     </div>
 
                     <div className="editable-section">
-                      <h3 className="section-subtitle accent-title">Редагування додаткових даних</h3>
+                      <h3 className="section-subtitle">Редагування додаткових даних</h3>
 
                       <div className="form-group">
-                        <label className="form-label highlight-label" htmlFor="website-url-input">
+                        <label className="form-label" htmlFor="website-url-input">
                           Посилання на офіційний веб-сайт (website_url)
                         </label>
                         <div className="readonly-link-wrapper">
@@ -769,7 +774,7 @@ export function AdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <label className="form-label highlight-label" htmlFor="strategies-url-input">
+                        <label className="form-label" htmlFor="strategies-url-input">
                           Посилання на стратегічні програми розвитку (strategies_url)
                         </label>
                         <input
@@ -822,7 +827,7 @@ export function AdminPage() {
                   </form>
 
                   <div className="programs-section">
-                    <h3 className="section-subtitle accent-title">
+                    <h3 className="section-subtitle">
                       {activeType === 'Community' ? 'Програми розвитку громади' : 'Програми розвитку області'} ({selectedUnit.strategies?.length || 0})
                     </h3>
                     {selectedUnit.strategies && selectedUnit.strategies.length > 0 ? (

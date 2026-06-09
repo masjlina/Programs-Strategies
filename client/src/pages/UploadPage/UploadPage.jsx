@@ -703,7 +703,7 @@ export function UploadPage() {
 
                   <div className="editable-section" style={{ marginTop: '16px', marginBottom: '20px' }}>
                     <div className="form-group">
-                      <label className="form-label highlight-label" htmlFor="upload-title-input">
+                      <label className="form-label" htmlFor="upload-title-input">
                         Назва програми
                       </label>
                       <input
@@ -716,7 +716,7 @@ export function UploadPage() {
                       />
                     </div>
                     <div className="form-group" style={{ marginTop: '12px' }}>
-                      <label className="form-label highlight-label" htmlFor="upload-url-input">
+                      <label className="form-label" htmlFor="upload-url-input">
                         Посилання на оригінал програми (URL)
                       </label>
                       <input
