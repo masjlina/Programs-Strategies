@@ -739,7 +739,7 @@ export function AdminPage() {
 
                       <div className="form-group">
                         <label className="form-label" htmlFor="website-url-input">
-                          Посилання на офіційний веб-сайт (website_url)
+                          Посилання на офіційний веб-сайт
                         </label>
                         <div className="readonly-link-wrapper">
                           <input
@@ -775,7 +775,7 @@ export function AdminPage() {
 
                       <div className="form-group">
                         <label className="form-label" htmlFor="strategies-url-input">
-                          Посилання на стратегічні програми розвитку (strategies_url)
+                          Посилання на стратегічні програми розвитку
                         </label>
                         <input
                           id="strategies-url-input"
@@ -783,7 +783,7 @@ export function AdminPage() {
                           type="text"
                           value={strategiesUrlInput}
                           onChange={handleStrategiesUrlChange}
-                          placeholder="Введіть URL, наприклад: https://example.com/strategy.pdf"
+                          placeholder="Введіть URL, наприклад: https://example.com/strategies"
                           disabled={saving}
                         />
                         {strategiesUrlError && (
@@ -792,7 +792,7 @@ export function AdminPage() {
                           </span>
                         )}
                         <span className="input-hint-text muted">
-                          Це посилання використовується для відображення оригінальних документів стратегічного планування.
+                          Це посилання використовується для відображення сторінки на якій знаходяться всі програми.
                         </span>
                       </div>
                     </div>

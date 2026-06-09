@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
 import { apiPost, fetchReferenceData, getUnitTypeLabel } from '../../lib/api.js'
 import './UploadPage.css'
+import {StrategyGoalsTree} from "../../components/search/StrategyGoalsTree.jsx";
+import {normalizeStrategy} from "../../lib/strategies.js";
 
 export function UploadPage() {
   const navigate = useNavigate()
@@ -691,7 +693,7 @@ export function UploadPage() {
 
                   <div className="preview-summary">
                     <div className="summary-item">
-                      <span className="summary-label">Об’єкт прив’язки:</span>
+                      <span className="summary-label">Об’єкт прив’язки: </span>
                       <strong className="summary-value highlight-text">{selectedUnitName}</strong>
                     </div>
                   </div>
