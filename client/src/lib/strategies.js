@@ -1,5 +1,4 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:5257'
+import { apiGet } from './api.js'
 
 let strategiesCache = null
 let unitsCache = null
@@ -7,16 +6,6 @@ const strategyDetailsCache = new Map()
 
 function normalize(value) {
   return String(value ?? '').trim().toLowerCase()
-}
-
-async function apiGet(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`)
-
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
-  }
-
-  return response.json()
 }
 
 function extractPeriod(title) {
@@ -35,7 +24,7 @@ function getCityFromUnitName(name) {
   return name
     ?.replace(/\s+міська територіальна громада$/i, '')
     ?.replace(/\s+територіальна громада$/i, '')
-    ?.trim() || 'Невідома громада'
+    ?.trim() || 'Невідома територія'
 }
 
 function normalizeTask(task) {
@@ -47,43 +36,48 @@ function normalizeTask(task) {
 }
 
 function normalizeOperationalGoal(goal) {
-  const tasks = goal.tasks ?? goal.programTasks ?? []
+  const programTasks = goal.programTasks ?? []
 
   return {
     ...goal,
     label: goal.label ?? String(goal.number ?? ''),
     title: goal.title ?? '',
-    tasks: tasks.map(normalizeTask),
-    programTasks: tasks,
+    programTasks: programTasks.map(normalizeTask),
   }
 }
 
 function normalizeStrategicGoal(goal) {
-  const operationalGoals = goal.operational_goals ?? goal.operationalGoals ?? []
+  const operationalGoals = goal.operationalGoals ?? []
 
   return {
     ...goal,
     label: goal.label ?? String(goal.number ?? ''),
     title: goal.title ?? '',
-    operational_goals: operationalGoals.map(normalizeOperationalGoal),
-    operationalGoals,
+    operationalGoals: operationalGoals.map(normalizeOperationalGoal),
   }
 }
 
 export function normalizeStrategy(strategy) {
-  const strategicGoals = strategy.strategic_goals ?? strategy.strategicGoals ?? []
+  const strategicGoals = strategy.strategicGoals ?? []
 
   return {
     ...strategy,
     title: strategy.title ?? '',
-    strategic_goals: strategicGoals.map(normalizeStrategicGoal),
-    strategicGoals,
+    strategyUrl: strategy.strategyUrl ?? null,
+    regionId: strategy.regionId ?? null,
+    districtId: strategy.districtId ?? null,
+    communityId: strategy.communityId ?? null,
+    strategicGoals: strategicGoals.map(normalizeStrategicGoal),
   }
 }
 
+function getStrategyUnitId(strategy) {
+  return strategy.communityId ?? strategy.districtId ?? strategy.regionId
+}
+
 function getDirections(strategy) {
-  const directions = strategy.strategic_goals
-    .flatMap((strategicGoal) => strategicGoal.operational_goals)
+  const directions = (strategy.strategicGoals ?? [])
+    .flatMap((strategicGoal) => strategicGoal.operationalGoals ?? [])
     .map((operationalGoal) => operationalGoal.title)
     .filter(Boolean)
 
@@ -94,22 +88,23 @@ function buildCatalogEntry(strategy, unit) {
   const normalizedStrategy = normalizeStrategy(strategy)
   const period = extractPeriod(normalizedStrategy.title)
   const directions = getDirections(normalizedStrategy)
-  const unitId = normalizedStrategy.communityId ?? normalizedStrategy.districtId ?? normalizedStrategy.regionId
+  const sourceUrl = normalizedStrategy.strategyUrl || null
 
   return {
     id: normalizedStrategy.id,
     city: getCityFromUnitName(unit?.name),
-    unitId: unitId,
+    unitId: getStrategyUnitId(normalizedStrategy),
     strategyId: normalizedStrategy.id,
     title: normalizedStrategy.title,
     period,
     summary: unit?.name
-      ? `Стратегічний документ громади: ${unit.name}.`
-      : 'Стратегічний документ громади.',
+      ? `Стратегічний документ: ${unit.name}.`
+      : 'Стратегічний документ територіальної одиниці.',
     directions,
     status: getStatus(period),
-    fileUrl: '#',
-    officialSourceUrl: '#',
+    strategyUrl: sourceUrl,
+    officialSourceUrl: sourceUrl,
+    fileUrl: sourceUrl?.toLowerCase().endsWith('.pdf') ? sourceUrl : null,
   }
 }
 
@@ -121,9 +116,15 @@ async function getUnitsMap() {
       apiGet('/api/Communities'),
     ]).then(([regions, districts, communities]) => {
       const allUnits = []
-      regions.forEach(r => allUnits.push({ id: r.id, name: r.nameFull || r.name, type: 'Region' }))
-      districts.forEach(d => allUnits.push({ id: d.id, name: d.nameFull || d.name, type: 'District' }))
-      communities.forEach(c => allUnits.push({ id: c.id, name: c.nameFull || c.name, type: 'Community' }))
+      regions.forEach((r) =>
+        allUnits.push({ id: r.id, name: r.nameFull || r.name, type: 'Region' }),
+      )
+      districts.forEach((d) =>
+        allUnits.push({ id: d.id, name: d.nameFull || d.name, type: 'District' }),
+      )
+      communities.forEach((c) =>
+        allUnits.push({ id: c.id, name: c.nameFull || c.name, type: 'Community' }),
+      )
       return allUnits
     })
   }
@@ -134,7 +135,10 @@ async function getUnitsMap() {
 
 function getStrategyById(id) {
   if (!strategyDetailsCache.has(id)) {
-    strategyDetailsCache.set(id, apiGet(`/api/Strategies/${id}`))
+    strategyDetailsCache.set(
+      id,
+      apiGet(`/api/Strategies/${id}`).then(normalizeStrategy),
+    )
   }
 
   return strategyDetailsCache.get(id)
@@ -142,21 +146,13 @@ function getStrategyById(id) {
 
 async function getCatalog() {
   if (!strategiesCache) {
-    strategiesCache = Promise.all([
-      apiGet('/api/Strategies'),
-      getUnitsMap(),
-    ]).then(async ([strategies, unitsById]) => {
-      const fullStrategies = await Promise.all(
-        strategies.map((strategy) =>
-          getStrategyById(strategy.id).catch(() => strategy),
-        ),
-      )
-
-      return fullStrategies.map((strategy) => {
-        const unitId = strategy.communityId ?? strategy.districtId ?? strategy.regionId
-        return buildCatalogEntry(strategy, unitsById.get(unitId))
-      })
-    })
+    strategiesCache = Promise.all([apiGet('/api/Strategies'), getUnitsMap()]).then(
+      ([strategies, unitsById]) =>
+        strategies.map((strategy) => {
+          const unitId = getStrategyUnitId(strategy)
+          return buildCatalogEntry(strategy, unitsById.get(unitId))
+        }),
+    )
   }
 
   return strategiesCache
@@ -198,8 +194,13 @@ export async function searchStrategies(query) {
 }
 
 export async function getCatalogEntryById(id) {
-  const catalog = await getCatalog()
-  return catalog.find((item) => item.id === id) ?? null
+  const [strategy, unitsById] = await Promise.all([
+    getStrategyById(id),
+    getUnitsMap(),
+  ])
+
+  const unitId = getStrategyUnitId(strategy)
+  return buildCatalogEntry(strategy, unitsById.get(unitId))
 }
 
 export async function getStrategiesByCity(city) {
@@ -208,31 +209,13 @@ export async function getStrategiesByCity(city) {
   return catalog.filter((item) => item.city === city)
 }
 
-export async function loadAdministrativeUnit(unitId) {
-  const unitsById = await getUnitsMap()
-  const unit = unitsById.get(unitId)
-
-  if (!unit) {
-    throw new Error(`Administrative unit not found: ${unitId}`)
-  }
-
-  return { administrative_unit: unit }
-}
-
-export function getStrategyFromUnit(unitPayload, strategyId) {
-  const strategies = unitPayload?.administrative_unit?.strategies
-  if (!strategies) return null
-  return strategies.find((strategy) => strategy.id === strategyId) ?? null
-}
-
 export async function loadStrategyForCatalogEntry(catalogEntry) {
-  const [strategyPayload, unitsById] = await Promise.all([
+  const [strategy, unitsById] = await Promise.all([
     getStrategyById(catalogEntry.strategyId ?? catalogEntry.id),
     getUnitsMap(),
   ])
 
-  const strategy = normalizeStrategy(strategyPayload)
-  const unit = unitsById.get(strategy.administrativeUnitId ?? catalogEntry.unitId)
+  const unit = unitsById.get(catalogEntry.unitId)
 
   return {
     unit,

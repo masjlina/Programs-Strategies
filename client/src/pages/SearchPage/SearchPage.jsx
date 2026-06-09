@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
+import { buildUploadLink, fetchReferenceData, getUnitTypeLabel } from '../../lib/api.js'
 import './SearchPage.css'
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:5257'
 
 export function SearchPage() {
   const [regions, setRegions] = useState([])
@@ -14,30 +12,23 @@ export function SearchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedFilter, setSelectedFilter] = useState('all') // 'all', 'community', 'region'
-  const [selectedSort, setSelectedSort] = useState('programs-desc') // 'programs-desc', 'programs-asc', 'name-asc'
+  const [selectedFilter, setSelectedFilter] = useState('all')
+  const [selectedSort, setSelectedSort] = useState('programs-desc')
   const [visibleCount, setVisibleCount] = useState(30)
 
-  // Fetch all reference data & strategies
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    Promise.all([
-      fetch(`${API_BASE_URL}/api/Regions`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Districts`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Communities`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Strategies`).then((r) => r.json()),
-    ])
-      .then(([regionsData, districtsData, communitiesData, strategiesData]) => {
+    fetchReferenceData()
+      .then(({ regions, districts, communities, strategies }) => {
         if (!cancelled) {
-          setRegions(regionsData || [])
-          setDistricts(districtsData || [])
-          setCommunities(communitiesData || [])
-          setStrategies(strategiesData || [])
+          setRegions(regions || [])
+          setDistricts(districts || [])
+          setCommunities(communities || [])
+          setStrategies(strategies || [])
         }
       })
       .catch((err) => {
@@ -55,7 +46,6 @@ export function SearchPage() {
     }
   }, [])
 
-  // Create lookups
   const regionsMap = useMemo(() => {
     const map = {}
     regions.forEach((r) => {
@@ -72,11 +62,9 @@ export function SearchPage() {
     return map
   }, [districts])
 
-  // Combine and normalize units to search over
   const searchList = useMemo(() => {
     const list = []
 
-    // 1. Add Regions
     regions.forEach((r) => {
       list.push({
         id: r.id,
@@ -84,13 +72,27 @@ export function SearchPage() {
         type: 'Region',
         regionId: r.id,
         districtId: null,
+        communityId: null,
         regionName: r.nameFull || r.name,
         districtName: '',
         strategies: strategies.filter((s) => s.regionId === r.id),
       })
     })
 
-    // 2. Add Communities
+    districts.forEach((d) => {
+      list.push({
+        id: d.id,
+        name: d.nameFull || d.name,
+        type: 'District',
+        regionId: d.regionId,
+        districtId: d.id,
+        communityId: null,
+        regionName: regionsMap[d.regionId] || '',
+        districtName: d.nameFull || d.name,
+        strategies: strategies.filter((s) => s.districtId === d.id),
+      })
+    })
+
     communities.forEach((c) => {
       list.push({
         id: c.id,
@@ -98,6 +100,7 @@ export function SearchPage() {
         type: 'Community',
         regionId: c.regionId,
         districtId: c.districtId,
+        communityId: c.id,
         regionName: regionsMap[c.regionId] || '',
         districtName: districtsMap[c.districtId] || '',
         strategies: strategies.filter((s) => s.communityId === c.id),
@@ -105,18 +108,15 @@ export function SearchPage() {
     })
 
     return list
-  }, [regions, communities, strategies, regionsMap, districtsMap])
+  }, [regions, districts, communities, strategies, regionsMap, districtsMap])
 
-  // Reset pagination when search query or filter changes
   useEffect(() => {
     setVisibleCount(30)
   }, [searchQuery, selectedFilter, selectedSort])
 
-  // Filter and sort matching results
   const filteredAndSortedList = useMemo(() => {
     let result = [...searchList]
 
-    // A. Query filter
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase()
       result = result.filter((item) => {
@@ -124,30 +124,32 @@ export function SearchPage() {
         const regionMatch = item.regionName.toLowerCase().includes(q)
         const districtMatch = item.districtName.toLowerCase().includes(q)
         const strategyMatch = item.strategies.some((s) =>
-          s.title.toLowerCase().includes(q)
+          s.title.toLowerCase().includes(q),
         )
         return nameMatch || regionMatch || districtMatch || strategyMatch
       })
     }
 
-    // B. Category filter (All, Communities, Regions)
     if (selectedFilter === 'community') {
       result = result.filter((item) => item.type === 'Community')
+    } else if (selectedFilter === 'district') {
+      result = result.filter((item) => item.type === 'District')
     } else if (selectedFilter === 'region') {
       result = result.filter((item) => item.type === 'Region')
     }
 
-    // C. Sorting
     result.sort((a, b) => {
       if (selectedSort === 'programs-desc') {
         const diff = b.strategies.length - a.strategies.length
         if (diff !== 0) return diff
-        return a.name.localeCompare(b.name, 'uk') // Alphabetical tie-breaker
-      } else if (selectedSort === 'programs-asc') {
+        return a.name.localeCompare(b.name, 'uk')
+      }
+      if (selectedSort === 'programs-asc') {
         const diff = a.strategies.length - b.strategies.length
         if (diff !== 0) return diff
         return a.name.localeCompare(b.name, 'uk')
-      } else if (selectedSort === 'name-asc') {
+      }
+      if (selectedSort === 'name-asc') {
         return a.name.localeCompare(b.name, 'uk')
       }
       return 0
@@ -166,11 +168,11 @@ export function SearchPage() {
         <header className="search-hub__hero">
           <h1 className="search-hub__title">Перелік стратегічних документів</h1>
           <p className="search-hub__subtitle muted">
-            Шукайте громади та області для перегляду їхніх програм розвитку або додавайте нові.
+            Шукайте громади, райони та області для перегляду їхніх програм розвитку або
+            додавайте нові.
           </p>
         </header>
 
-        {/* Search Input */}
         <section className="search-hub__controls-card" aria-label="Параметри пошуку">
           <div className="search-bar-wrapper">
             <input
@@ -193,7 +195,6 @@ export function SearchPage() {
             )}
           </div>
 
-          {/* Filters & Sorting */}
           <div className="controls-row">
             <div className="filter-group">
               <span className="controls-label">Тип одиниці:</span>
@@ -214,6 +215,13 @@ export function SearchPage() {
                 </button>
                 <button
                   type="button"
+                  className={`segmented-btn ${selectedFilter === 'district' ? 'active' : ''}`}
+                  onClick={() => setSelectedFilter('district')}
+                >
+                  Райони
+                </button>
+                <button
+                  type="button"
                   className={`segmented-btn ${selectedFilter === 'region' ? 'active' : ''}`}
                   onClick={() => setSelectedFilter('region')}
                 >
@@ -223,7 +231,9 @@ export function SearchPage() {
             </div>
 
             <div className="sort-group">
-              <label className="controls-label" htmlFor="sort-select">Сортування:</label>
+              <label className="controls-label" htmlFor="sort-select">
+                Сортування:
+              </label>
               <select
                 id="sort-select"
                 className="sort-select"
@@ -246,7 +256,6 @@ export function SearchPage() {
           </div>
         ) : (
           <>
-            {/* Results count */}
             <p className="search-results-info muted">
               Знайдено територіальних одиниць: <strong>{filteredAndSortedList.length}</strong>
             </p>
@@ -260,8 +269,10 @@ export function SearchPage() {
                 {visibleResults.map((item) => (
                   <article key={`${item.type}-${item.id}`} className="unit-card">
                     <div className="unit-card__header">
-                      <span className={`unit-card__badge unit-card__badge--${item.type.toLowerCase()}`}>
-                        {item.type === 'Community' ? 'Громада' : 'Область'}
+                      <span
+                        className={`unit-card__badge unit-card__badge--${item.type.toLowerCase()}`}
+                      >
+                        {getUnitTypeLabel(item.type)}
                       </span>
                       {item.strategies.length > 0 ? (
                         <span className="unit-card__status unit-card__status--has-program">
@@ -276,9 +287,9 @@ export function SearchPage() {
 
                     <h2 className="unit-card__title">{item.name}</h2>
 
-                    {item.type === 'Community' && (
+                    {item.type !== 'Region' && (
                       <p className="unit-card__location muted">
-                        {item.districtName && `${item.districtName}, `}
+                        {item.type === 'Community' && item.districtName && `${item.districtName}, `}
                         {item.regionName}
                       </p>
                     )}
@@ -290,7 +301,10 @@ export function SearchPage() {
                           <ul className="unit-card__strategies-list">
                             {item.strategies.map((s) => (
                               <li key={s.id} className="unit-card__strategy-item">
-                                <Link className="unit-card__strategy-link" to={`/strategies/${s.id}`}>
+                                <Link
+                                  className="unit-card__strategy-link"
+                                  to={`/strategies/${s.id}`}
+                                >
                                   <span className="unit-card__strategy-icon">📄</span>
                                   <span className="unit-card__strategy-title">{s.title}</span>
                                 </Link>
@@ -300,7 +314,9 @@ export function SearchPage() {
                         </div>
                       ) : (
                         <div className="unit-card__empty-state">
-                          <p className="muted small-text">Документи ще не завантажені для цієї одиниці.</p>
+                          <p className="muted small-text">
+                            Документи ще не завантажені для цієї одиниці.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -308,11 +324,11 @@ export function SearchPage() {
                     <div className="unit-card__footer">
                       <Link
                         className={`btn ${item.strategies.length > 0 ? 'btn--tonal' : 'btn--primary'} btn--sm unit-card__action-btn`}
-                        to={`/upload?type=${item.type}&regionId=${item.regionId}${
-                          item.districtId ? `&districtId=${item.districtId}` : ''
-                        }&communityId=${item.id}`}
+                        to={buildUploadLink(item)}
                       >
-                        {item.strategies.length > 0 ? '➕ Додати ще одну програму' : '➕ Додати програму'}
+                        {item.strategies.length > 0
+                          ? '➕ Додати ще одну програму'
+                          : '➕ Додати програму'}
                       </Link>
                     </div>
                   </article>

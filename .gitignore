@@ -1,10 +1,47 @@
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.*.example
+.env.compose
+
+# --- IDE & editor ---
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.code-workspace
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
+*.user
 *.sw?
-.env.compose
+.history/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Frontend (client/) ---
+client/node_modules/
+client/dist/
+client/dist-ssr/
+client/*.local
+
+# --- Backend (.NET) ---
+**/bin/
+**/obj/
+**/.vs/
+*.userosscache
+*.sln.docstates
+server/WebAPI/appsettings.Development.json
+
+# --- Logs & temp ---
+*.log
+logs/
+
+# --- Legacy project files ---
+*.njsproj
+*.ntvs*
+*.sln

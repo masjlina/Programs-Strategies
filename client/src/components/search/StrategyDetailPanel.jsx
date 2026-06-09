@@ -24,10 +24,10 @@ export function StrategyDetailPanel({ catalogEntry, loaded, loading, error }) {
   const directionLabel =
     catalogEntry.directions?.[0] ?? measureRows[0]?.direction ?? 'Загальний огляд'
 
+  const sourceLink = catalogEntry.officialSourceUrl ?? strategy?.strategyUrl ?? null
   const fileLink = catalogEntry.fileUrl
-  const sourceLink = catalogEntry.officialSourceUrl
-  const fileDisabled = !fileLink || fileLink === '#'
-  const sourceDisabled = !sourceLink || sourceLink === '#'
+  const fileDisabled = !fileLink
+  const sourceDisabled = !sourceLink
 
   if (loading) {
     return <p className="strategy-detail__loading muted">Завантаження стратегії…</p>

@@ -1,12 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
-import { StrategyGoalsTree } from '../../components/search/StrategyGoalsTree.jsx'
-import { normalizeStrategy } from '../../lib/strategies.js'
+import { apiPost, fetchReferenceData, getUnitTypeLabel } from '../../lib/api.js'
 import './UploadPage.css'
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:5257'
 
 export function UploadPage() {
   const navigate = useNavigate()
@@ -50,26 +46,20 @@ export function UploadPage() {
     setLoading(true)
     setError(null)
 
-    Promise.all([
-      fetch(`${API_BASE_URL}/api/Regions`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Districts`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Communities`).then((r) => r.json()),
-      fetch(`${API_BASE_URL}/api/Strategies`).then((r) => r.json()),
-    ])
-      .then(([regionsData, districtsData, communitiesData, strategiesData]) => {
+    fetchReferenceData()
+      .then(({ regions: regionsData, districts: districtsData, communities: communitiesData, strategies: strategiesData }) => {
         if (!cancelled) {
           setRegions(regionsData || [])
           setDistricts(districtsData || [])
           setCommunities(communitiesData || [])
           setStrategies(strategiesData || [])
 
-          // Pre-select from URL search parameters if available
           const qType = searchParams.get('type')
           const qRegionId = searchParams.get('regionId')
           const qDistrictId = searchParams.get('districtId')
           const qCommunityId = searchParams.get('communityId')
 
-          if (qType && qType !== 'District') setSelectedType(qType)
+          if (qType) setSelectedType(qType)
           if (qRegionId) setSelectedRegionId(qRegionId)
           if (qDistrictId) setSelectedDistrictId(qDistrictId)
           if (qCommunityId) setSelectedCommunityId(qCommunityId)
@@ -384,18 +374,7 @@ export function UploadPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Strategies`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        throw new Error(errorData?.message || 'Не вдалося зберегти програму на сервері.')
-      }
+      await apiPost('/api/Strategies', payload)
 
       setSaveStatus('success')
       setSaveMessage('Програму успішно додано та зв’язано!')
@@ -454,13 +433,13 @@ export function UploadPage() {
     if (selectedType === 'Region') {
       const unit = regions.find((r) => r.id === selectedRegionId)
       return unit ? unit.nameFull || unit.name : 'Не обрано'
-    } else if (selectedType === 'District') {
+    }
+    if (selectedType === 'District') {
       const unit = districts.find((d) => d.id === selectedDistrictId)
       return unit ? unit.nameFull || unit.name : 'Не обрано'
-    } else {
-      const unit = communities.find((c) => c.id === selectedCommunityId)
-      return unit ? unit.nameFull || unit.name : 'Не обрано'
     }
+    const unit = communities.find((c) => c.id === selectedCommunityId)
+    return unit ? unit.nameFull || unit.name : 'Не обрано'
   }, [selectedType, selectedRegionId, selectedDistrictId, selectedCommunityId, regions, districts, communities])
 
   return (
@@ -483,7 +462,7 @@ export function UploadPage() {
           <div className="upload-grid">
             {/* Left Column: List of units without programs */}
             <section className="upload-grid__sidebar card-panel" aria-label="Адміністративні одиниці без стратегій">
-              <h2 className="panel-title">Громади без програм</h2>
+              <h2 className="panel-title">Одиниці без програм</h2>
               <p className="muted panel-description">
                 Оберіть із переліку територіальних одиниць, у яких наразі немає жодного завантаженого документа.
               </p>
@@ -495,6 +474,12 @@ export function UploadPage() {
                   onClick={() => setActiveTab('Community')}
                 >
                   Громади
+                </button>
+                <button
+                  className={`tab-menu__btn ${activeTab === 'District' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('District')}
+                >
+                  Райони
                 </button>
                 <button
                   className={`tab-menu__btn ${activeTab === 'Region' ? 'active' : ''}`}
@@ -523,7 +508,7 @@ export function UploadPage() {
                         onClick={() => handleQuickSelect(item)}
                       >
                         <span className="unit-name">{item.name}</span>
-                        <span className="unit-badge">{activeTab === 'Community' ? 'Громада' : 'Область'}</span>
+                        <span className="unit-badge">{getUnitTypeLabel(activeTab)}</span>
                       </button>
                     </li>
                   ))
@@ -556,6 +541,16 @@ export function UploadPage() {
                         onChange={() => setSelectedType('Community')}
                       />
                       <span>Громада</span>
+                    </label>
+                    <label className={`level-radio-label ${selectedType === 'District' ? 'active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="unitType"
+                        value="District"
+                        checked={selectedType === 'District'}
+                        onChange={() => setSelectedType('District')}
+                      />
+                      <span>Район</span>
                     </label>
                     <label className={`level-radio-label ${selectedType === 'Region' ? 'active' : ''}`}>
                       <input

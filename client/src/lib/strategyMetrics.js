@@ -50,9 +50,9 @@ export function getPeriodElapsedPercent(period, now = new Date()) {
 export function flattenTasks(strategy) {
   const rows = []
 
-  for (const strategicGoal of strategy.strategic_goals ?? []) {
-    for (const operationalGoal of strategicGoal.operational_goals ?? []) {
-      for (const task of operationalGoal.tasks ?? []) {
+  for (const strategicGoal of strategy.strategicGoals ?? []) {
+    for (const operationalGoal of strategicGoal.operationalGoals ?? []) {
+      for (const task of operationalGoal.programTasks ?? []) {
         rows.push({
           id: task.id,
           label: task.label,
@@ -120,11 +120,11 @@ export function computeDashboardMetrics(strategy, catalogEntry) {
   const tasksDone = measures.filter((m) => m.status === 'done').length
   const tasksInProgress = measures.filter((m) => m.status === 'in_progress').length
 
-  const operationalGoals = strategy.strategic_goals.reduce(
-    (sum, sg) => sum + (sg.operational_goals?.length ?? 0),
+  const operationalGoals = (strategy.strategicGoals ?? []).reduce(
+    (sum, sg) => sum + (sg.operationalGoals?.length ?? 0),
     0,
   )
-  const strategicGoals = strategy.strategic_goals.length
+  const strategicGoals = strategy.strategicGoals?.length ?? 0
 
   const budgetTotalMln =
     catalogEntry.budgetTotalMln ??
