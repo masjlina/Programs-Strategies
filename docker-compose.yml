@@ -30,7 +30,7 @@ services:
       ConnectionStrings__ConnStr: Host=db;Port=5432;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD};Database=${POSTGRES_DB:-ProgramsStrategies}
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN}
     ports:
-      - "8080:5000"
+      - "8081:5000"
 
   client:
     build:
@@ -43,7 +43,7 @@ services:
     depends_on:
       - api
     ports:
-      - "3000:80"
+      - "3001:80"
 
 volumes:
   programs_strategies_db_data:
