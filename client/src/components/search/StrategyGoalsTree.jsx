@@ -16,7 +16,7 @@ function sortByNumber(items = []) {
 }
 
 export function StrategyGoalsTree({ strategy }) {
-  const strategicGoals = sortByNumber(strategy.strategic_goals)
+  const strategicGoals = sortByNumber(strategy.strategicGoals ?? [])
   const [collapsedStrategicIds, setCollapsedStrategicIds] = useState(() => new Set())
   const [collapsedOperationalIds, setCollapsedOperationalIds] = useState(
     () => new Set(),
@@ -56,7 +56,7 @@ export function StrategyGoalsTree({ strategy }) {
     setCollapsedOperationalIds(
       new Set(
         strategicGoals.flatMap((goal) =>
-          sortByNumber(goal.operational_goals).map(
+          sortByNumber(goal.operationalGoals).map(
             (operationalGoal) => operationalGoal.id,
           ),
         ),
@@ -83,7 +83,7 @@ export function StrategyGoalsTree({ strategy }) {
                 Стратегічна ціль {strategicGoal.label}. {strategicGoal.title}
               </a>
               <ol>
-                {sortByNumber(strategicGoal.operational_goals).map(
+                {sortByNumber(strategicGoal.operationalGoals).map(
                   (operationalGoal) => (
                     <li key={operationalGoal.id}>
                       <a
@@ -122,7 +122,7 @@ export function StrategyGoalsTree({ strategy }) {
 
       <div className="goals-tree__outline">
         {strategicGoals.map((strategicGoal) => {
-          const operationalGoals = sortByNumber(strategicGoal.operational_goals)
+          const operationalGoals = sortByNumber(strategicGoal.operationalGoals)
           const isStrategicCollapsed = collapsedStrategicIds.has(strategicGoal.id)
 
           return (
@@ -161,7 +161,7 @@ export function StrategyGoalsTree({ strategy }) {
                 <p className="goals-tree__branch-label">Оперативні цілі</p>
 
                 {operationalGoals.map((operationalGoal) => {
-                  const tasks = sortByNumber(operationalGoal.tasks)
+                  const tasks = sortByNumber(operationalGoal.programTasks)
                   const isOperationalCollapsed = collapsedOperationalIds.has(
                     operationalGoal.id,
                   )

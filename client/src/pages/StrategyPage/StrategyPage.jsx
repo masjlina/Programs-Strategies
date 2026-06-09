@@ -77,10 +77,11 @@ export function StrategyPage() {
     )
   }
 
+  const sourceLink =
+    catalogEntry.officialSourceUrl ?? loaded?.strategy?.strategyUrl ?? null
   const fileLink = catalogEntry.fileUrl
-  const sourceLink = catalogEntry.officialSourceUrl
-  const fileDisabled = !fileLink || fileLink === '#'
-  const sourceDisabled = !sourceLink || sourceLink === '#'
+  const fileDisabled = !fileLink
+  const sourceDisabled = !sourceLink
 
   const strategy = loaded?.strategy
   const unitName = loaded?.unit?.name

@@ -240,6 +240,11 @@
   color: #065f46;
 }
 
+.unit-card__badge--district {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .unit-card__status {
   font-size: 12px;
   font-weight: 600;
