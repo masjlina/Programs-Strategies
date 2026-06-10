@@ -215,13 +215,6 @@ export function SearchPage() {
                 </button>
                 <button
                   type="button"
-                  className={`segmented-btn ${selectedFilter === 'district' ? 'active' : ''}`}
-                  onClick={() => setSelectedFilter('district')}
-                >
-                  Райони
-                </button>
-                <button
-                  type="button"
                   className={`segmented-btn ${selectedFilter === 'region' ? 'active' : ''}`}
                   onClick={() => setSelectedFilter('region')}
                 >

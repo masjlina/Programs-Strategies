@@ -544,7 +544,7 @@ export function AdminPage() {
 
                 {/* Website URL filter */}
                 <div className="form-group">
-                    <label className="form-label">Посилання на сайт</label>
+                    <label className="form-label">Посилання на офіційний веб-сайт</label>
 
                     <select
                     className="form-select sidebar-select"
@@ -559,7 +559,7 @@ export function AdminPage() {
                 </div>
                 {/* Strategies URL filter */}
                 <div className="form-group">
-                    <label className="form-label">Посилання на програму</label>
+                    <label className="form-label">Посилання на стратегічні програми розвитку</label>
                     <select
                     className="form-select sidebar-select"
                     value={strategiesUrlFilter}
@@ -573,7 +573,7 @@ export function AdminPage() {
                 </div>
                 {/* Has Uploaded Programs filter */}
                 <div className="form-group">
-                    <label className="form-label">Програми</label>
+                    <label className="form-label">Наявність програми</label>
                     <select
                     className="form-select sidebar-select"
                     value={hasStrategiesFilter}

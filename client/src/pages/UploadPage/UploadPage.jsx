@@ -478,12 +478,6 @@ export function UploadPage() {
                   Громади
                 </button>
                 <button
-                  className={`tab-menu__btn ${activeTab === 'District' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('District')}
-                >
-                  Райони
-                </button>
-                <button
                   className={`tab-menu__btn ${activeTab === 'Region' ? 'active' : ''}`}
                   onClick={() => setActiveTab('Region')}
                 >
@@ -543,16 +537,6 @@ export function UploadPage() {
                         onChange={() => setSelectedType('Community')}
                       />
                       <span>Громада</span>
-                    </label>
-                    <label className={`level-radio-label ${selectedType === 'District' ? 'active' : ''}`}>
-                      <input
-                        type="radio"
-                        name="unitType"
-                        value="District"
-                        checked={selectedType === 'District'}
-                        onChange={() => setSelectedType('District')}
-                      />
-                      <span>Район</span>
                     </label>
                     <label className={`level-radio-label ${selectedType === 'Region' ? 'active' : ''}`}>
                       <input
