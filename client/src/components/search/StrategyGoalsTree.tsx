@@ -1,58 +1,95 @@
-import { useState } from 'react'
-import './StrategyGoalsTree.css'
+import { useState } from "react";
+import "./StrategyGoalsTree.css";
 
-const collator = new Intl.Collator('uk', {
-  numeric: true,
-  sensitivity: 'base',
-})
-
-function sortByNumber(items = []) {
-  return [...items].sort((a, b) => {
-    const numberDiff = (a.number ?? 0) - (b.number ?? 0)
-    if (numberDiff !== 0) return numberDiff
-
-    return collator.compare(a.label ?? '', b.label ?? '')
-  })
+interface ProgramTask {
+  id: string;
+  label: string;
+  number: number;
+  description: string;
 }
 
-export function StrategyGoalsTree({ strategy }) {
-  const strategicGoals = sortByNumber(strategy.strategicGoals ?? [])
-  const [collapsedStrategicIds, setCollapsedStrategicIds] = useState(() => new Set())
-  const [collapsedOperationalIds, setCollapsedOperationalIds] = useState(
-    () => new Set(),
-  )
+interface OperationalGoal {
+  id: string;
+  label: string;
+  number: number;
+  title: string;
+  programTasks: ProgramTask[];
+}
 
-  const toggleSetItem = (setter, id) => {
+interface StrategicGoal {
+  id: string;
+  label: string;
+  number: number;
+  title: string;
+  operationalGoals: OperationalGoal[];
+}
+
+interface Strategy {
+  strategicGoals: StrategicGoal[];
+}
+
+interface StrategyGoalsTreeProps {
+  strategy: Strategy;
+}
+
+const collator = new Intl.Collator("uk", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function sortByNumber<T extends { number?: number; label?: string }>(
+  items: T[],
+): T[] {
+  return [...items].sort((a, b) => {
+    const numberDiff = (a.number ?? 0) - (b.number ?? 0);
+    if (numberDiff !== 0) return numberDiff;
+    return collator.compare(a.label ?? "", b.label ?? "");
+  });
+}
+
+export function StrategyGoalsTree({ strategy }: StrategyGoalsTreeProps) {
+  const strategicGoals = sortByNumber(strategy.strategicGoals ?? []);
+  const [collapsedStrategicIds, setCollapsedStrategicIds] = useState<
+    Set<string>
+  >(new Set());
+  const [collapsedOperationalIds, setCollapsedOperationalIds] = useState<
+    Set<string>
+  >(new Set());
+
+  const toggleSetItem = (
+    setter: React.Dispatch<React.SetStateAction<Set<string>>>,
+    id: string,
+  ) => {
     setter((current) => {
-      const next = new Set(current)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-  const expandStrategicGoal = (id) => {
+  const expandStrategicGoal = (id: string) => {
     setCollapsedStrategicIds((current) => {
-      const next = new Set(current)
-      next.delete(id)
-      return next
-    })
-  }
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  };
 
-  const expandOperationalGoal = (strategicGoalId, operationalGoalId) => {
-    expandStrategicGoal(strategicGoalId)
+  const expandOperationalGoal = (
+    strategicGoalId: string,
+    operationalGoalId: string,
+  ) => {
+    expandStrategicGoal(strategicGoalId);
     setCollapsedOperationalIds((current) => {
-      const next = new Set(current)
-      next.delete(operationalGoalId)
-      return next
-    })
-  }
+      const next = new Set(current);
+      next.delete(operationalGoalId);
+      return next;
+    });
+  };
 
   const collapseAll = () => {
-    setCollapsedStrategicIds(new Set(strategicGoals.map((goal) => goal.id)))
+    setCollapsedStrategicIds(new Set(strategicGoals.map((goal) => goal.id)));
     setCollapsedOperationalIds(
       new Set(
         strategicGoals.flatMap((goal) =>
@@ -61,13 +98,13 @@ export function StrategyGoalsTree({ strategy }) {
           ),
         ),
       ),
-    )
-  }
+    );
+  };
 
   const expandAll = () => {
-    setCollapsedStrategicIds(new Set())
-    setCollapsedOperationalIds(new Set())
-  }
+    setCollapsedStrategicIds(new Set());
+    setCollapsedOperationalIds(new Set());
+  };
 
   return (
     <section className="goals-tree">
@@ -89,7 +126,10 @@ export function StrategyGoalsTree({ strategy }) {
                       <a
                         href={`#goal-${operationalGoal.id}`}
                         onClick={() =>
-                          expandOperationalGoal(strategicGoal.id, operationalGoal.id)
+                          expandOperationalGoal(
+                            strategicGoal.id,
+                            operationalGoal.id,
+                          )
                         }
                       >
                         {operationalGoal.label}. {operationalGoal.title}
@@ -122,8 +162,10 @@ export function StrategyGoalsTree({ strategy }) {
 
       <div className="goals-tree__outline">
         {strategicGoals.map((strategicGoal) => {
-          const operationalGoals = sortByNumber(strategicGoal.operationalGoals)
-          const isStrategicCollapsed = collapsedStrategicIds.has(strategicGoal.id)
+          const operationalGoals = sortByNumber(strategicGoal.operationalGoals);
+          const isStrategicCollapsed = collapsedStrategicIds.has(
+            strategicGoal.id,
+          );
 
           return (
             <article
@@ -142,29 +184,29 @@ export function StrategyGoalsTree({ strategy }) {
                 >
                   <span
                     className={`goals-tree__toggle ${
-                      isStrategicCollapsed ? 'goals-tree__toggle--collapsed' : ''
+                      isStrategicCollapsed
+                        ? "goals-tree__toggle--collapsed"
+                        : ""
                     }`}
                     aria-hidden="true"
                   >
                     &gt;
                   </span>
                   <span>
-                    Стратегічна ціль {strategicGoal.label}. {strategicGoal.title}
+                    Стратегічна ціль {strategicGoal.label}.{" "}
+                    {strategicGoal.title}
                   </span>
                 </button>
               </h2>
 
-              <div
-                className="goals-tree__branch"
-                hidden={isStrategicCollapsed}
-              >
+              <div className="goals-tree__branch" hidden={isStrategicCollapsed}>
                 <p className="goals-tree__branch-label">Оперативні цілі</p>
 
                 {operationalGoals.map((operationalGoal) => {
-                  const tasks = sortByNumber(operationalGoal.programTasks)
+                  const tasks = sortByNumber(operationalGoal.programTasks);
                   const isOperationalCollapsed = collapsedOperationalIds.has(
                     operationalGoal.id,
-                  )
+                  );
 
                   return (
                     <section
@@ -187,8 +229,8 @@ export function StrategyGoalsTree({ strategy }) {
                           <span
                             className={`goals-tree__toggle ${
                               isOperationalCollapsed
-                                ? 'goals-tree__toggle--collapsed'
-                                : ''
+                                ? "goals-tree__toggle--collapsed"
+                                : ""
                             }`}
                             aria-hidden="true"
                           >
@@ -211,13 +253,13 @@ export function StrategyGoalsTree({ strategy }) {
                         ))}
                       </ol>
                     </section>
-                  )
+                  );
                 })}
               </div>
             </article>
-          )
+          );
         })}
       </div>
     </section>
-  )
+  );
 }

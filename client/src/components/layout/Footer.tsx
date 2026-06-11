@@ -1,4 +1,4 @@
-import { Container } from './Container.jsx'
+import { Container } from './Container'
 
 export function Footer() {
   const year = new Date().getFullYear()

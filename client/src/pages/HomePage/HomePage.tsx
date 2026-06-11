@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Container } from '../../components/layout/Container.jsx'
+import { Container } from '../../components/layout/Container'
 import './HomePage.css'
 
 export function HomePage() {

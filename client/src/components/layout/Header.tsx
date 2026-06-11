@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Container } from './Container.jsx'
+import { Container } from './Container'
 
 export function Header() {
   return (
