@@ -3,7 +3,7 @@ import { MainLayout } from './layouts/MainLayout.jsx'
 import { HomePage } from './pages/HomePage/HomePage.jsx'
 import { SearchPage } from './pages/SearchPage/SearchPage.jsx'
 import { StrategyPage } from './pages/StrategyPage/StrategyPage.jsx'
-import { UploadPage } from './pages/UploadPage/UploadPage.jsx'
+import { UploadPage } from './pages/UploadPage/UploadPage.tsx'
 import { AdminPage } from './pages/AdminPage/AdminPage.jsx'
 import './App.css'
 
