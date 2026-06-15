@@ -100,3 +100,24 @@ export function buildUploadLink(item: UploadItem): string {
 
   return `/upload?${params.toString()}`;
 }
+
+export async function apiUploadDocument<TResponse>(file: File): Promise<TResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${getApiBaseUrl()}/api/UploadFile/parse-document`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const payload = (await response
+      .json()
+      .catch(() => null)) as ApiError | null;
+    throw new Error(
+      payload?.message ?? `API request failed: ${response.status}`,
+    );
+  }
+
+  return response.json() as Promise<TResponse>;
+}

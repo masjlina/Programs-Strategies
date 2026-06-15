@@ -57,6 +57,12 @@ public class ParseService : IParseService
         throw new InvalidDataException("File type not supported");
     }
 
+    public async Task<StrategyDto> ParseDocument(IFormFile file)
+    {
+        var parser = new DocumentParser();
+        return await parser.ParseFormFileAsync(file);
+    }
+
     public async Task Save(CommunityDto communityDto)
     {
         var isExist = await _dbContext.Communities

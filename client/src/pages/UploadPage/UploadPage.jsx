@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Container } from '../../components/layout/Container.jsx'
-import { apiPost, fetchReferenceData, getUnitTypeLabel } from '../../lib/api.js'
+import { apiPost, fetchReferenceData, getUnitTypeLabel, apiUploadDocument } from '../../lib/api.js'
 import './UploadPage.css'
 import {StrategyGoalsTree} from "../../components/search/StrategyGoalsTree.jsx";
 import {normalizeStrategy} from "../../lib/strategies.js";
@@ -33,6 +33,7 @@ export function UploadPage() {
   const [fileName, setFileName] = useState('')
   const [parsedStrategy, setParsedStrategy] = useState(null)
   const [jsonError, setJsonError] = useState(null)
+  const [parsing, setParsing] = useState(false)
 
   // Save state
   const [saving, setSaving] = useState(false)
@@ -194,85 +195,105 @@ export function UploadPage() {
     if (item.communityId) setSelectedCommunityId(item.communityId)
   }
 
-  // Parse JSON file
-  const processJsonFile = (file) => {
+  // Parse JSON file or upload/parse documents (DOCX, PDF, DOC) on the server
+  const processUploadFile = async (file) => {
     if (!file) return
 
     setFileName(file.name)
     setJsonError(null)
     setParsedStrategy(null)
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const json = JSON.parse(event.target.result)
+    const isJson = file.name.endsWith('.json');
 
-        // Determine if this is a CommunityDto style json or StrategyDto style json
-        let strategy = null
+    if (isJson) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target.result)
 
-        // Style A: CommunityDto (e.g. data.json) with nested strategies array
-        if (json.strategies && Array.isArray(json.strategies) && json.strategies.length > 0) {
-          strategy = json.strategies[0]
-        } else if (json.Strategies && Array.isArray(json.Strategies) && json.Strategies.length > 0) {
-          strategy = json.Strategies[0]
-        }
-        // Style B: Direct StrategyDto
-        else if (json.title || json.Title) {
-          strategy = json
-        }
+          // Determine if this is a CommunityDto style json or StrategyDto style json
+          let strategy = null
 
-        if (!strategy) {
-          throw new Error('Файл не містить коректної структури програми розвитку (відсутній заголовок або перелік стратегій).')
-        }
+          // Style A: CommunityDto (e.g. data.json) with nested strategies array
+          if (json.strategies && Array.isArray(json.strategies) && json.strategies.length > 0) {
+            strategy = json.strategies[0]
+          } else if (json.Strategies && Array.isArray(json.Strategies) && json.Strategies.length > 0) {
+            strategy = json.Strategies[0]
+          }
+          // Style B: Direct StrategyDto
+          else if (json.title || json.Title) {
+            strategy = json
+          }
 
-        // Normalize naming properties recursively to standard DTO structure (title, strategicGoals, operationalGoals, programTasks)
-        const normalizeStrategy = (raw) => {
-          const title = raw.title || raw.Title || 'Програма розвитку'
-          const strategyUrl = raw.strategyUrl || raw.StrategyUrl || null
+          if (!strategy) {
+            throw new Error('Файл не містить коректної структури програми розвитку (відсутній заголовок або перелік стратегій).')
+          }
 
-          // Goals mapping
-          const rawGoals = raw.strategicGoals || raw.StrategicGoals || raw.strategic_goals || []
-          const strategicGoals = rawGoals.map((g, gi) => {
-            const label = g.label || g.Label || String(gi + 1)
-            const number = g.number || g.Number || (gi + 1)
-            const gTitle = g.title || g.Title || 'Стратегічна ціль'
+          // Normalize naming properties recursively to standard DTO structure (title, strategicGoals, operationalGoals, programTasks)
+          const normalizeStrategy = (raw) => {
+            const title = raw.title || raw.Title || 'Програма розвитку'
+            const strategyUrl = raw.strategyUrl || raw.StrategyUrl || null
 
-            // Operational goals
-            const rawOps = g.operationalGoals || g.OperationalGoals || g.operational_goals || []
-            const operationalGoals = rawOps.map((op, opi) => {
-              const opLabel = op.label || op.Label || `${label}.${opi + 1}`
-              const opNumber = op.number || op.Number || (opi + 1)
-              const opTitle = op.title || op.Title || 'Операційна ціль'
+            // Goals mapping
+            const rawGoals = raw.strategicGoals || raw.StrategicGoals || raw.strategic_goals || []
+            const strategicGoals = rawGoals.map((g, gi) => {
+              const label = g.label || g.Label || String(gi + 1)
+              const number = g.number || g.Number || (gi + 1)
+              const gTitle = g.title || g.Title || 'Стратегічна ціль'
 
-              // Program tasks
-              const rawTasks = op.programTasks || op.ProgramTasks || op.tasks || op.Tasks || []
-              const programTasks = rawTasks.map((t, ti) => {
-                const tLabel = t.label || t.Label || `${opLabel}.${ti + 1}`
-                const tNumber = t.number || t.Number || (ti + 1)
-                const description = t.description || t.Description || 'Завдання'
-                return { label: tLabel, number: tNumber, description }
+              // Operational goals
+              const rawOps = g.operationalGoals || g.OperationalGoals || g.operational_goals || []
+              const operationalGoals = rawOps.map((op, opi) => {
+                const opLabel = op.label || op.Label || `${label}.${opi + 1}`
+                const opNumber = op.number || op.Number || (opi + 1)
+                const opTitle = op.title || op.Title || 'Операційна ціль'
+
+                // Program tasks
+                const rawTasks = op.programTasks || op.ProgramTasks || op.tasks || op.Tasks || []
+                const programTasks = rawTasks.map((t, ti) => {
+                  const tLabel = t.label || t.Label || `${opLabel}.${ti + 1}`
+                  const tNumber = t.number || t.Number || (ti + 1)
+                  const description = t.description || t.Description || 'Завдання'
+                  return { label: tLabel, number: tNumber, description }
+                })
+
+                return { label: opLabel, number: opNumber, title: opTitle, programTasks }
               })
 
-              return { label: opLabel, number: opNumber, title: opTitle, programTasks }
+              return { label, number, title: gTitle, operationalGoals }
             })
 
-            return { label, number, title: gTitle, operationalGoals }
-          })
+            return { title, strategyUrl, strategicGoals }
+          }
 
-          return { title, strategyUrl, strategicGoals }
+          const normalized = normalizeStrategy(strategy)
+          setParsedStrategy(normalized)
+        } catch (err) {
+          setJsonError(err.message || 'Не вдалося розпарсити JSON-файл.')
+          console.error(err)
         }
-
-        const normalized = normalizeStrategy(strategy)
-        setParsedStrategy(normalized)
+      }
+      reader.onerror = () => {
+        setJsonError('Помилка під час читання файлу.')
+      }
+      reader.readAsText(file)
+    } else {
+      // It's a document file (.docx, .pdf, .doc)
+      setParsing(true)
+      try {
+        const parsed = await apiUploadDocument(file)
+        if (parsed) {
+          setParsedStrategy(parsed)
+        } else {
+          throw new Error('Отримано пустий результат від сервера.')
+        }
       } catch (err) {
-        setJsonError(err.message || 'Не вдалося розпарсити JSON-файл.')
+        setJsonError(err.message || 'Не вдалося розпізнати структуру документа.')
         console.error(err)
+      } finally {
+        setParsing(false)
       }
     }
-    reader.onerror = () => {
-      setJsonError('Помилка під час читання файлу.')
-    }
-    reader.readAsText(file)
   }
 
   // Handle Drag Events
@@ -292,13 +313,13 @@ export function UploadPage() {
     setDragActive(false)
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processJsonFile(e.dataTransfer.files[0])
+      processUploadFile(e.dataTransfer.files[0])
     }
   }
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      processJsonFile(e.target.files[0])
+      processUploadFile(e.target.files[0])
     }
   }
 
@@ -611,15 +632,15 @@ export function UploadPage() {
                 </div>
               </section>
 
-              {/* Card 2: JSON file drag and drop */}
-              <section className="card-panel" aria-label="Завантаження JSON файлу">
+              {/* Card 2: JSON or Document file upload */}
+              <section className="card-panel" aria-label="Завантаження файлу програми">
                 <h2 className="panel-title">2. Завантаження програми</h2>
                 <p className="muted panel-description">
-                  Перетягніть готовий JSON-файл структури програми або оберіть його на комп’ютері.
+                  Перетягніть готовий JSON-файл або документ (PDF, DOCX, DOC) чи оберіть його на комп’ютері.
                 </p>
 
                 <div
-                  className={`dropzone ${dragActive ? 'active' : ''} ${parsedStrategy ? 'has-file' : ''}`}
+                  className={`dropzone ${dragActive ? 'active' : ''} ${parsedStrategy ? 'has-file' : ''} ${parsing ? 'parsing' : ''}`}
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
                   onDragLeave={handleDrag}
@@ -629,25 +650,34 @@ export function UploadPage() {
                     type="file"
                     id="file-upload"
                     className="dropzone__input"
-                    accept=".json,application/json"
+                    accept=".json,application/json,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,application/pdf,.doc,application/msword"
                     onChange={handleFileChange}
+                    disabled={parsing}
                   />
-                  <label htmlFor="file-upload" className="dropzone__label">
-                    <svg className="dropzone__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    {fileName ? (
-                      <div className="dropzone__status">
-                        <span className="file-highlight">{fileName}</span>
-                        <p className="muted">Перетягніть або натисніть сюди, щоб обрати інший файл</p>
-                      </div>
-                    ) : (
-                      <div className="dropzone__status">
-                        <span>Перетягніть сюди JSON-файл</span>
-                        <p className="muted">або натисніть кнопку для пошуку на комп’ютері</p>
-                      </div>
-                    )}
-                  </label>
+                  {parsing ? (
+                    <div className="parsing-status">
+                      <div className="spinner"></div>
+                      <span>Обробка та розпізнавання документа...</span>
+                      <p className="muted">Це може зайняти кілька секунд</p>
+                    </div>
+                  ) : (
+                    <label htmlFor="file-upload" className="dropzone__label">
+                      <svg className="dropzone__icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      {fileName ? (
+                        <div className="dropzone__status">
+                          <span className="file-highlight">{fileName}</span>
+                          <p className="muted">Перетягніть або натисніть сюди, щоб обрати інший файл</p>
+                        </div>
+                      ) : (
+                        <div className="dropzone__status">
+                          <span>Перетягніть сюди JSON або документ (PDF, DOCX, DOC)</span>
+                          <p className="muted">або натисніть кнопку для пошуку на комп’ютері</p>
+                        </div>
+                      )}
+                    </label>
+                  )}
                 </div>
 
                 <button

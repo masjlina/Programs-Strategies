@@ -22,12 +22,14 @@ interface CatalogEntry {
 }
 
 interface StrategyTask {
+  id?: string;
   label?: string;
   number?: string | number;
   description?: string;
 }
 
 interface OperationalGoal {
+  id?: string;
   label?: string;
   number?: string | number;
   title?: string;
@@ -35,6 +37,7 @@ interface OperationalGoal {
 }
 
 interface StrategicGoal {
+  id?: string;
   label?: string;
   number?: string | number;
   title?: string;
@@ -90,18 +93,22 @@ function getCityFromUnitName(name?: string): string {
 function normalizeTask(
   task: StrategyTask,
 ): Required<Pick<StrategyTask, "label" | "description">> & StrategyTask {
+  const label = task.label ?? String(task.number ?? "");
   return {
+    id: (task as any).id ?? label,
     ...task,
-    label: task.label ?? String(task.number ?? ""),
+    label,
     description: task.description ?? "",
   };
 }
 
 function normalizeOperationalGoal(goal: OperationalGoal): OperationalGoal {
   const programTasks = goal.programTasks ?? [];
+  const label = goal.label ?? String(goal.number ?? "");
   return {
+    id: (goal as any).id ?? label,
     ...goal,
-    label: goal.label ?? String(goal.number ?? ""),
+    label,
     title: goal.title ?? "",
     programTasks: programTasks.map(normalizeTask),
   };
@@ -109,9 +116,11 @@ function normalizeOperationalGoal(goal: OperationalGoal): OperationalGoal {
 
 function normalizeStrategicGoal(goal: StrategicGoal): StrategicGoal {
   const operationalGoals = goal.operationalGoals ?? [];
+  const label = goal.label ?? String(goal.number ?? "");
   return {
+    id: (goal as any).id ?? label,
     ...goal,
-    label: goal.label ?? String(goal.number ?? ""),
+    label,
     title: goal.title ?? "",
     operationalGoals: operationalGoals.map(normalizeOperationalGoal),
   };

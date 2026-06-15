@@ -45,6 +45,31 @@ public class UploadFileController : ControllerBase
     }
 
     /// <summary>
+    /// Parses a document (PDF, DOCX, DOC) and returns the extracted StrategyDto without persisting it.
+    /// </summary>
+    /// <param name="request">Multipart request containing the file.</param>
+    /// <response code="200">Document parsed successfully and Strategy DTO returned.</response>
+    /// <response code="400">Uploaded file is invalid or cannot be parsed.</response>
+    [HttpPost("parse-document")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> ParseDocument([FromForm] UploadFileRequest request)
+    {
+        try
+        {
+            var parsed = await _parseService.ParseDocument(request.File);
+            return Ok(parsed);
+        }
+        catch (InvalidDataException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Imports official Ukrainian administrative data from official-data.csv.
     /// </summary>
     /// <param name="request">Multipart request containing official-data.csv.</param>
