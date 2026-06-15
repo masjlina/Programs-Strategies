@@ -6,6 +6,88 @@ import './UploadPage.css'
 import {StrategyGoalsTree} from "../../components/search/StrategyGoalsTree.jsx";
 import {normalizeStrategy} from "../../lib/strategies.js";
 
+// Helper to ensure all items in the preview tree have unique client-side IDs
+function ensureIds(strategy) {
+  if (!strategy) return null;
+  return {
+    ...strategy,
+    strategicGoals: (strategy.strategicGoals || []).map((g, gi) => {
+      const gId = g.id || `g-${Date.now()}-${gi}-${Math.random().toString(36).substr(2, 9)}`;
+      return {
+        ...g,
+        id: gId,
+        operationalGoals: (g.operationalGoals || []).map((op, opi) => {
+          const opId = op.id || `op-${Date.now()}-${gi}-${opi}-${Math.random().toString(36).substr(2, 9)}`;
+          return {
+            ...op,
+            id: opId,
+            programTasks: (op.programTasks || []).map((t, ti) => {
+              const tId = t.id || `t-${Date.now()}-${gi}-${opi}-${ti}-${Math.random().toString(36).substr(2, 9)}`;
+              return {
+                ...t,
+                id: tId
+              };
+            })
+          };
+        })
+      };
+    })
+  };
+}
+
+// Resequence sequential numbers (number = index + 1) recursively for correct rendering order
+function resequenceGoals(goals) {
+  return goals.map((g, gi) => ({
+    ...g,
+    number: gi + 1,
+    operationalGoals: (g.operationalGoals || []).map((op, opi) => ({
+      ...op,
+      number: opi + 1,
+      programTasks: (op.programTasks || []).map((t, ti) => ({
+        ...t,
+        number: ti + 1
+      }))
+    }))
+  }));
+}
+
+// Inline SVGs for interactive editor actions
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+  </svg>
+);
+
+const DeleteIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const MoveUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+  </svg>
+);
+
+const MoveDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const CancelIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
 export function UploadPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -40,8 +122,339 @@ export function UploadPage() {
   const [saveStatus, setSaveStatus] = useState('idle') // idle, success, error
   const [saveMessage, setSaveMessage] = useState('')
 
-  // Expanded nodes for preview tree
-  const [expandedGoals, setExpandedGoals] = useState({})
+  // Expanded/Collapsed nodes for preview tree
+  const [collapsedIds, setCollapsedIds] = useState(new Set())
+
+  // Editing state for goals/tasks tree preview
+  const [editingId, setEditingId] = useState(null)
+  const [editFields, setEditFields] = useState({ label: '', title: '', description: '' })
+  const [pendingNewItemId, setPendingNewItemId] = useState(null)
+
+  const discardPendingNewItem = (nextEditingId = null) => {
+    if (pendingNewItemId && pendingNewItemId !== nextEditingId) {
+      deleteItem(pendingNewItemId)
+      setPendingNewItemId(null)
+    }
+  }
+
+  const startEdit = (item) => {
+    discardPendingNewItem(item.id)
+    setEditingId(item.id)
+    setEditFields({
+      label: item.label || '',
+      title: item.title || '',
+      description: item.description || ''
+    })
+  }
+
+  const cancelEdit = () => {
+    if (editingId && editingId === pendingNewItemId) {
+      deleteItem(editingId)
+      setPendingNewItemId(null)
+    }
+    setEditingId(null)
+    setEditFields({ label: '', title: '', description: '' })
+  }
+
+  const saveEdit = (id) => {
+    updateItem(id, editFields)
+    if (id === pendingNewItemId) {
+      setPendingNewItemId(null)
+    }
+    setEditingId(null)
+    setEditFields({ label: '', title: '', description: '' })
+  }
+
+  const updateItem = (id, fields) => {
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+      const updatedGoals = prev.strategicGoals.map((g) => {
+        if (g.id === id) {
+          return { ...g, ...fields }
+        }
+        return {
+          ...g,
+          operationalGoals: g.operationalGoals.map((op) => {
+            if (op.id === id) {
+              return { ...op, ...fields }
+            }
+            return {
+              ...op,
+              programTasks: op.programTasks.map((t) => {
+                if (t.id === id) {
+                  return { ...t, ...fields }
+                }
+                return t
+              })
+            }
+          })
+        }
+      })
+      return {
+        ...prev,
+        strategicGoals: updatedGoals
+      }
+    })
+  }
+
+  const deleteItem = (id) => {
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+      const filteredGoals = prev.strategicGoals
+        .filter((g) => g.id !== id)
+        .map((g) => ({
+          ...g,
+          operationalGoals: g.operationalGoals
+            .filter((op) => op.id !== id)
+            .map((op) => ({
+              ...op,
+              programTasks: op.programTasks.filter((t) => t.id !== id)
+            }))
+        }))
+      return {
+        ...prev,
+        strategicGoals: resequenceGoals(filteredGoals)
+      }
+    })
+  }
+
+  const moveItem = (id, direction) => {
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+
+      const swapInArray = (arr, index1, index2) => {
+        const copy = [...arr]
+        const temp = copy[index1]
+        copy[index1] = copy[index2]
+        copy[index2] = temp
+        return copy
+      }
+
+      let newGoals = prev.strategicGoals
+
+      // 1. Strategic Goals
+      const gIndex = prev.strategicGoals.findIndex((g) => g.id === id)
+      if (gIndex !== -1) {
+        const targetIndex = direction === 'up' ? gIndex - 1 : gIndex + 1
+        if (targetIndex >= 0 && targetIndex < prev.strategicGoals.length) {
+          newGoals = swapInArray(prev.strategicGoals, gIndex, targetIndex)
+        }
+      } else {
+        // 2. Check operational goals and tasks
+        newGoals = prev.strategicGoals.map((g) => {
+          const opIndex = g.operationalGoals.findIndex((op) => op.id === id)
+          if (opIndex !== -1) {
+            const targetIndex = direction === 'up' ? opIndex - 1 : opIndex + 1
+            if (targetIndex >= 0 && targetIndex < g.operationalGoals.length) {
+              return {
+                ...g,
+                operationalGoals: swapInArray(g.operationalGoals, opIndex, targetIndex)
+              }
+            }
+            return g
+          }
+
+          return {
+            ...g,
+            operationalGoals: g.operationalGoals.map((op) => {
+              const tIndex = op.programTasks.findIndex((t) => t.id === id)
+              if (tIndex !== -1) {
+                const targetIndex = direction === 'up' ? tIndex - 1 : tIndex + 1
+                if (targetIndex >= 0 && targetIndex < op.programTasks.length) {
+                  return {
+                    ...op,
+                    programTasks: swapInArray(op.programTasks, tIndex, targetIndex)
+                  }
+                }
+              }
+              return op
+            })
+          }
+        })
+      }
+
+      return {
+        ...prev,
+        strategicGoals: resequenceGoals(newGoals)
+      }
+    })
+  }
+
+  const insertAfter = (siblingId, type) => {
+    discardPendingNewItem()
+    const newId = `${type === 'strategic' ? 'g' : type === 'operational' ? 'op' : 't'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+
+      const createNewItem = (itemType, baseNumber, baseLabel) => {
+        if (itemType === 'strategic') {
+          return {
+            id: newId,
+            label: String(baseNumber),
+            number: baseNumber,
+            title: 'Нова стратегічна ціль',
+            operationalGoals: []
+          }
+        }
+        if (itemType === 'operational') {
+          return {
+            id: newId,
+            label: baseLabel ? `${baseLabel}.${baseNumber}` : String(baseNumber),
+            number: baseNumber,
+            title: 'Нова оперативна ціль',
+            programTasks: []
+          }
+        }
+        return {
+          id: newId,
+          label: baseLabel ? `${baseLabel}.${baseNumber}` : String(baseNumber),
+          number: baseNumber,
+          description: 'Нове завдання'
+        }
+      }
+
+      let newGoals = prev.strategicGoals
+
+      // 1. Strategic Goals
+      const gIndex = prev.strategicGoals.findIndex((g) => g.id === siblingId)
+      if (gIndex !== -1) {
+        const nextNum = prev.strategicGoals[gIndex].number + 1
+        const newItem = createNewItem('strategic', nextNum)
+        const nextGoals = [...prev.strategicGoals]
+        nextGoals.splice(gIndex + 1, 0, newItem)
+        newGoals = nextGoals
+      } else {
+        // 2. Operational Goals & Tasks
+        newGoals = prev.strategicGoals.map((g) => {
+          const opIndex = g.operationalGoals.findIndex((op) => op.id === siblingId)
+          if (opIndex !== -1) {
+            const nextNum = g.operationalGoals[opIndex].number + 1
+            const newItem = createNewItem('operational', nextNum, g.label)
+            const nextOps = [...g.operationalGoals]
+            nextOps.splice(opIndex + 1, 0, newItem)
+            return { ...g, operationalGoals: nextOps }
+          }
+
+          return {
+            ...g,
+            operationalGoals: g.operationalGoals.map((op) => {
+              const tIndex = op.programTasks.findIndex((t) => t.id === siblingId)
+              if (tIndex !== -1) {
+                const nextNum = op.programTasks[tIndex].number + 1
+                const newItem = createNewItem('task', nextNum, op.label)
+                const nextTasks = [...op.programTasks]
+                nextTasks.splice(tIndex + 1, 0, newItem)
+                return { ...op, programTasks: nextTasks }
+              }
+              return op
+            })
+          }
+        })
+      }
+
+      return {
+        ...prev,
+        strategicGoals: resequenceGoals(newGoals)
+      }
+    })
+
+    // Auto start editing
+    setPendingNewItemId(newId)
+    setEditingId(newId)
+    if (type === 'strategic') {
+      setEditFields({ label: '', title: 'Нова стратегічна ціль', description: '' })
+    } else if (type === 'operational') {
+      setEditFields({ label: '', title: 'Нова оперативна ціль', description: '' })
+    } else {
+      setEditFields({ label: '', title: '', description: 'Нове завдання' })
+    }
+  }
+
+  const addStrategicGoal = () => {
+    discardPendingNewItem()
+    const newId = `g-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+      const nextNum = prev.strategicGoals.length + 1
+      const newItem = {
+        id: newId,
+        label: String(nextNum),
+        number: nextNum,
+        title: 'Нова стратегічна ціль',
+        operationalGoals: []
+      }
+      return {
+        ...prev,
+        strategicGoals: [...prev.strategicGoals, newItem]
+      }
+    })
+    setPendingNewItemId(newId)
+    setEditingId(newId)
+    setEditFields({ label: '', title: 'Нова стратегічна ціль', description: '' })
+  }
+
+  const addOperationalGoal = (goalId) => {
+    discardPendingNewItem()
+    const newId = `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        strategicGoals: prev.strategicGoals.map((g) => {
+          if (g.id !== goalId) return g
+          const nextNum = g.operationalGoals.length + 1
+          const newItem = {
+            id: newId,
+            label: g.label ? `${g.label}.${nextNum}` : String(nextNum),
+            number: nextNum,
+            title: 'Нова оперативна ціль',
+            programTasks: []
+          }
+          return {
+            ...g,
+            operationalGoals: [...g.operationalGoals, newItem]
+          }
+        })
+      }
+    })
+    setPendingNewItemId(newId)
+    setEditingId(newId)
+    setEditFields({ label: '', title: 'Нова оперативна ціль', description: '' })
+  }
+
+  const addTask = (opId) => {
+    discardPendingNewItem()
+    const newId = `t-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setParsedStrategy((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        strategicGoals: prev.strategicGoals.map((g) => {
+          return {
+            ...g,
+            operationalGoals: g.operationalGoals.map((op) => {
+              if (op.id !== opId) return op
+              const nextNum = op.programTasks.length + 1
+              const newItem = {
+                id: newId,
+                label: op.label ? `${op.label}.${nextNum}` : String(nextNum),
+                number: nextNum,
+                description: 'Нове завдання'
+              }
+              return {
+                ...op,
+                programTasks: [...op.programTasks, newItem]
+              }
+            })
+          }
+        })
+      }
+    })
+    setPendingNewItemId(newId)
+    setEditingId(newId)
+    setEditFields({ label: '', title: '', description: 'Нове завдання' })
+  }
 
   // Fetch initial data
   useEffect(() => {
@@ -202,6 +615,7 @@ export function UploadPage() {
     setFileName(file.name)
     setJsonError(null)
     setParsedStrategy(null)
+    setCollapsedIds(new Set())
 
     const isJson = file.name.endsWith('.json');
 
@@ -267,7 +681,7 @@ export function UploadPage() {
           }
 
           const normalized = normalizeStrategy(strategy)
-          setParsedStrategy(normalized)
+          setParsedStrategy(ensureIds(normalized))
         } catch (err) {
           setJsonError(err.message || 'Не вдалося розпарсити JSON-файл.')
           console.error(err)
@@ -283,7 +697,7 @@ export function UploadPage() {
       try {
         const parsed = await apiUploadDocument(file)
         if (parsed) {
-          setParsedStrategy(parsed)
+          setParsedStrategy(ensureIds(parsed))
         } else {
           throw new Error('Отримано пустий результат від сервера.')
         }
@@ -323,13 +737,6 @@ export function UploadPage() {
     }
   }
 
-  // Node toggle helper for preview tree
-  const toggleGoal = (key) => {
-    setExpandedGoals((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
 
   // Validate URL format on frontend
   const validateFrontendUrl = (url) => {
@@ -386,6 +793,23 @@ export function UploadPage() {
     setSaveStatus('idle')
     setSaveMessage('')
 
+    // Clean up temporary IDs from goals structure before sending to server
+    const cleanStrategicGoals = (parsedStrategy.strategicGoals || []).map((g) => ({
+      label: g.label,
+      number: g.number,
+      title: g.title,
+      operationalGoals: (g.operationalGoals || []).map((op) => ({
+        label: op.label,
+        number: op.number,
+        title: op.title,
+        programTasks: (op.programTasks || []).map((t) => ({
+          label: t.label,
+          number: t.number,
+          description: t.description
+        }))
+      }))
+    }));
+
     // Prepare strategy payload
     const payload = {
       title: parsedStrategy.title,
@@ -393,7 +817,7 @@ export function UploadPage() {
       regionId: selectedType === 'Region' ? targetId : null,
       districtId: selectedType === 'District' ? targetId : null,
       communityId: selectedType === 'Community' ? targetId : null,
-      strategicGoals: parsedStrategy.strategicGoals,
+      strategicGoals: cleanStrategicGoals,
     }
 
     try {
@@ -446,9 +870,10 @@ export function UploadPage() {
         }
       ]
     }
-    setParsedStrategy(mockJson)
+    setParsedStrategy(ensureIds(mockJson))
     setFileName('test_strategy.json')
     setJsonError(null)
+    setCollapsedIds(new Set())
   }
 
   // Get name of current selected unit for summary banner
@@ -464,6 +889,101 @@ export function UploadPage() {
     const unit = communities.find((c) => c.id === selectedCommunityId)
     return unit ? unit.nameFull || unit.name : 'Не обрано'
   }, [selectedType, selectedRegionId, selectedDistrictId, selectedCommunityId, regions, districts, communities])
+
+  const programContentsCard = parsedStrategy && (
+    <section className="upload-grid__toc-card card-panel" aria-label="Зміст програми">
+      <div className="preview-toc">
+        <h2 className="panel-title">Зміст програми</h2>
+
+        <div className="preview-toc__scrollable">
+          <ol className="preview-toc__list">
+            {(parsedStrategy.strategicGoals || []).map((goal) => (
+              <li key={goal.id} className="preview-toc__item">
+                <a
+                  href={`#goal-${goal.id}`}
+                  onClick={() => {
+                    setCollapsedIds((prev) => {
+                      const next = new Set(prev)
+                      next.delete(goal.id)
+                      return next
+                    })
+                  }}
+                >
+                  <span className="preview-toc__number">{goal.label ? `${goal.label}.` : ''}</span>
+                  <span className="preview-toc__text">{goal.title || 'Без назви'}</span>
+                </a>
+                {goal.operationalGoals && goal.operationalGoals.length > 0 && (
+                  <ol className="preview-toc__sublist">
+                    {goal.operationalGoals.map((op) => (
+                      <li key={op.id} className="preview-toc__subitem">
+                        <a
+                          href={`#goal-${op.id}`}
+                          onClick={() => {
+                            setCollapsedIds((prev) => {
+                              const next = new Set(prev)
+                              next.delete(goal.id)
+                              next.delete(op.id)
+                              return next
+                            })
+                          }}
+                        >
+                          <span className="preview-toc__number">{op.label ? `${op.label}.` : ''}</span>
+                          <span className="preview-toc__text">{op.title || 'Без назви'}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="preview-toc__actions">
+          <button
+            type="button"
+            className="btn btn--tonal btn--sm"
+            onClick={() => {
+              const ids = []
+              parsedStrategy.strategicGoals.forEach((goal) => {
+                ids.push(goal.id)
+                if (goal.operationalGoals) {
+                  goal.operationalGoals.forEach((op) => {
+                    ids.push(op.id)
+                  })
+                }
+              })
+              setCollapsedIds(new Set(ids))
+            }}
+          >
+            Згорнути все
+          </button>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => setCollapsedIds(new Set())}
+          >
+            Розгорнути все
+          </button>
+        </div>
+
+        <div className="preview-toc__footer">
+          <button
+            className="btn btn--primary btn--save-sticky"
+            onClick={handleSave}
+            disabled={saving || !parsedStrategy.title?.trim()}
+          >
+            {saving ? 'Збереження...' : 'Зберегти програму'}
+          </button>
+          {saveMessage && (
+            <div className={`save-status-msg save-status-msg--${saveStatus} preview-toc__status-msg`}>
+              {saveMessage}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
 
   return (
     <main className="upload-page">
@@ -484,58 +1004,62 @@ export function UploadPage() {
         ) : (
           <div className="upload-grid">
             {/* Left Column: List of units without programs */}
-            <section className="upload-grid__sidebar card-panel" aria-label="Адміністративні одиниці без стратегій">
-              <h2 className="panel-title">Одиниці без програм</h2>
-              <p className="muted panel-description">
-                Оберіть із переліку територіальних одиниць, у яких наразі немає жодного завантаженого документа.
-              </p>
+            <div className="upload-grid__sidebar-stack">
+              <section className="upload-grid__sidebar card-panel" aria-label="Адміністративні одиниці без стратегій">
+                <h2 className="panel-title">Одиниці без програм</h2>
+                <p className="muted panel-description">
+                  Оберіть із переліку територіальних одиниць, у яких наразі немає жодного завантаженого документа.
+                </p>
 
-              {/* Tabs */}
-              <div className="tab-menu">
-                <button
-                  className={`tab-menu__btn ${activeTab === 'Community' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('Community')}
-                >
-                  Громади
-                </button>
-                <button
-                  className={`tab-menu__btn ${activeTab === 'Region' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('Region')}
-                >
-                  Області
-                </button>
-              </div>
+                {/* Tabs */}
+                <div className="tab-menu">
+                  <button
+                    className={`tab-menu__btn ${activeTab === 'Community' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Community')}
+                  >
+                    Громади
+                  </button>
+                  <button
+                    className={`tab-menu__btn ${activeTab === 'Region' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('Region')}
+                  >
+                    Області
+                  </button>
+                </div>
 
-              {/* Search */}
-              <input
-                className="sidebar-search"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Пошук одиниці..."
-              />
+                {/* Search */}
+                <input
+                  className="sidebar-search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Пошук одиниці..."
+                />
 
-              {/* Units List */}
-              <ul className="units-list">
-                {filteredUnitsList.length > 0 ? (
-                  filteredUnitsList.map((item) => (
-                    <li key={item.id} className="units-list__item">
-                      <button
-                        className="units-list__action-btn"
-                        onClick={() => handleQuickSelect(item)}
-                      >
-                        <span className="unit-name">{item.name}</span>
-                        <span className="unit-badge">{getUnitTypeLabel(activeTab)}</span>
-                      </button>
+                {/* Units List */}
+                <ul className="units-list">
+                  {filteredUnitsList.length > 0 ? (
+                    filteredUnitsList.map((item) => (
+                      <li key={item.id} className="units-list__item">
+                        <button
+                          className="units-list__action-btn"
+                          onClick={() => handleQuickSelect(item)}
+                        >
+                          <span className="unit-name">{item.name}</span>
+                          <span className="unit-badge">{getUnitTypeLabel(activeTab)}</span>
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="units-list__empty muted">
+                      {searchQuery ? 'Нічого не знайдено' : 'Усі одиниці в цій категорії мають програми!'}
                     </li>
-                  ))
-                ) : (
-                  <li className="units-list__empty muted">
-                    {searchQuery ? 'Нічого не знайдено' : 'Усі одиниці в цій категорії мають програми!'}
-                  </li>
-                )}
-              </ul>
-            </section>
+                  )}
+                </ul>
+              </section>
+
+              {programContentsCard}
+            </div>
 
             {/* Right Column: Upload forms, target selection & preview */}
             <div className="upload-grid__main">
@@ -705,65 +1229,71 @@ export function UploadPage() {
                     Перевірте правильність розпізнавання структури документа перед фіксацією в базі даних.
                   </p>
 
-                  <div className="preview-summary">
-                    <div className="summary-item">
-                      <span className="summary-label">Об’єкт прив’язки: </span>
-                      <strong className="summary-value highlight-text">{selectedUnitName}</strong>
-                    </div>
-                  </div>
-
-                  <div className="editable-section" style={{ marginTop: '16px', marginBottom: '20px' }}>
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="upload-title-input">
-                        Назва програми
-                      </label>
-                      <input
-                        id="upload-title-input"
-                        className="form-input"
-                        type="text"
-                        value={parsedStrategy.title}
-                        onChange={(e) => setParsedStrategy(prev => ({ ...prev, title: e.target.value }))}
-                        placeholder="Введіть назву програми розвитку"
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginTop: '12px' }}>
-                      <label className="form-label" htmlFor="upload-url-input">
-                        Посилання на оригінал програми (URL)
-                      </label>
-                      <input
-                        id="upload-url-input"
-                        className="form-input"
-                        type="text"
-                        value={parsedStrategy.strategyUrl || ''}
-                        onChange={(e) => setParsedStrategy(prev => ({ ...prev, strategyUrl: e.target.value }))}
-                        placeholder="Введіть URL, наприклад: https://example.com/strategy.pdf"
-                      />
-                    </div>
-                  </div>
-                  <div className="tree-container">
-                    <div className="tree-header">Структура програми</div>
-                    <div className="tree-body" style={{ maxHeight: 'none', overflowY: 'visible', padding: 0 }}>
-                      {parsedStrategy.strategicGoals && parsedStrategy.strategicGoals.length > 0 ? (
-                        <StrategyGoalsTree strategy={normalizeStrategy(parsedStrategy)} />
-                      ) : (
-                        <div className="tree-empty muted" style={{ padding: '20px' }}>Стратегічні цілі відсутні у цьому файлі.</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="action-buttons">
-                    <button
-                      className="btn btn--primary"
-                      onClick={handleSave}
-                      disabled={saving || !parsedStrategy.title?.trim()}
-                    >
-                      {saving ? 'Збереження...' : 'Зберегти програму'}
-                    </button>
-                    {saveMessage && (
-                      <div className={`save-status-msg save-status-msg--${saveStatus}`}>
-                        {saveMessage}
+                  <div className="preview-layout-grid">
+                    <div className="preview-layout__content">
+                      <div className="preview-summary">
+                        <div className="summary-item">
+                          <span className="summary-label">Об’єкт прив’язки: </span>
+                          <strong className="summary-value highlight-text">{selectedUnitName}</strong>
+                        </div>
                       </div>
-                    )}
+
+                      <div className="editable-section" style={{ marginTop: '16px', marginBottom: '20px' }}>
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="upload-title-input">
+                            Назва програми
+                          </label>
+                          <input
+                            id="upload-title-input"
+                            className="form-input"
+                            type="text"
+                            value={parsedStrategy.title}
+                            onChange={(e) => setParsedStrategy(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Введіть назву програми розвитку"
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginTop: '12px' }}>
+                          <label className="form-label" htmlFor="upload-url-input">
+                            Посилання на оригінал програми (URL)
+                          </label>
+                          <input
+                            id="upload-url-input"
+                            className="form-input"
+                            type="text"
+                            value={parsedStrategy.strategyUrl || ''}
+                            onChange={(e) => setParsedStrategy(prev => ({ ...prev, strategyUrl: e.target.value }))}
+                            placeholder="Введіть URL, наприклад: https://example.com/strategy.pdf"
+                          />
+                        </div>
+                      </div>
+                      <div className="tree-container">
+                        <div className="tree-header">Структура програми</div>
+                        <div className="tree-body" style={{ maxHeight: 'none', overflowY: 'visible', padding: 0 }}>
+                          {parsedStrategy.strategicGoals && parsedStrategy.strategicGoals.length > 0 ? (
+                            <EditableGoalsTree
+                              strategy={parsedStrategy}
+                              onUpdate={updateItem}
+                              onDelete={deleteItem}
+                              onMove={moveItem}
+                              onInsert={insertAfter}
+                              onAddStrategic={addStrategicGoal}
+                              onAddOperational={addOperationalGoal}
+                              onAddTask={addTask}
+                              editingId={editingId}
+                              editFields={editFields}
+                              setEditFields={setEditFields}
+                              startEdit={startEdit}
+                              cancelEdit={cancelEdit}
+                              saveEdit={saveEdit}
+                              collapsedIds={collapsedIds}
+                              setCollapsedIds={setCollapsedIds}
+                            />
+                          ) : (
+                            <div className="tree-empty muted" style={{ padding: '20px' }}>Стратегічні цілі відсутні у цьому файлі.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
               )}
@@ -772,5 +1302,358 @@ export function UploadPage() {
         )}
       </Container>
     </main>
+  )
+}
+
+// Interactive Goals Tree Editor
+function EditableGoalsTree({
+  strategy,
+  onUpdate,
+  onDelete,
+  onMove,
+  onInsert,
+  onAddStrategic,
+  onAddOperational,
+  onAddTask,
+  editingId,
+  editFields,
+  setEditFields,
+  startEdit,
+  cancelEdit,
+  saveEdit,
+  collapsedIds,
+  setCollapsedIds
+}) {
+  const toggleCollapse = (id) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const isCollapsed = (id) => collapsedIds.has(id)
+  const strategicGoals = strategy.strategicGoals || []
+
+  return (
+    <div className="editable-goals-tree">
+      {strategicGoals.map((goal, gIndex) => {
+        const goalCollapsed = isCollapsed(goal.id)
+        const isEditingGoal = editingId === goal.id
+
+        return (
+          <div key={goal.id} id={`goal-${goal.id}`} className="tree-node">
+            <div className="tree-node__header" style={{ display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="edit-tree__collapse-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleCollapse(goal.id)
+                }}
+                style={{ padding: 0, marginRight: '4px' }}
+              >
+                <span className={`chevron ${!goalCollapsed ? 'expanded' : ''}`}>▶</span>
+              </button>
+              
+              <span className="node-badge node-badge--strategic" style={{ marginRight: '8px' }}>
+                Стратегічна ціль
+              </span>
+
+              {isEditingGoal ? (
+                <div className="edit-tree__editor-fields" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                  <input
+                    type="text"
+                    className="edit-tree__input edit-tree__input--label"
+                    value={editFields.label}
+                    onChange={(e) => setEditFields(prev => ({ ...prev, label: e.target.value }))}
+                    placeholder="№"
+                    style={{ width: '60px' }}
+                  />
+                  <input
+                    type="text"
+                    className="edit-tree__input edit-tree__input--title"
+                    value={editFields.title}
+                    onChange={(e) => setEditFields(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Назва стратегічної цілі"
+                    autoFocus
+                    style={{ flex: 1 }}
+                  />
+                </div>
+              ) : (
+                <div className="edit-tree__text-content" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                  <span className="edit-tree__label-num" style={{ fontWeight: '700' }}>
+                    {goal.label ? `${goal.label}. ` : ''}
+                  </span>
+                  <span className="node-title">
+                    {goal.title || 'Без назви'}
+                  </span>
+                </div>
+              )}
+
+              <div className="edit-tree__node-actions" onClick={(e) => e.stopPropagation()} style={{ marginLeft: 'auto' }}>
+                {isEditingGoal ? (
+                  <>
+                    <button type="button" className="edit-tree__action-btn edit-tree__action-btn--save" onClick={() => saveEdit(goal.id)} title="Зберегти">
+                      <CheckIcon />
+                    </button>
+                    <button type="button" className="edit-tree__action-btn edit-tree__action-btn--cancel" onClick={cancelEdit} title="Скасувати">
+                      <CancelIcon />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="edit-tree__action-btn" onClick={() => startEdit(goal)} title="Редагувати">
+                      <EditIcon />
+                    </button>
+                    <button type="button" className="edit-tree__action-btn" onClick={() => onMove(goal.id, 'up')} disabled={gIndex === 0} title="Перемістити вгору">
+                      <MoveUpIcon />
+                    </button>
+                    <button type="button" className="edit-tree__action-btn" onClick={() => onMove(goal.id, 'down')} disabled={gIndex === strategicGoals.length - 1} title="Перемістити вниз">
+                      <MoveDownIcon />
+                    </button>
+                    <button type="button" className="edit-tree__action-btn edit-tree__action-btn--danger" onClick={() => { if(confirm('Ви впевнені, що хочете видалити цю стратегічну ціль та всі її оперативні цілі й завдання?')) onDelete(goal.id) }} title="Видалити">
+                      <DeleteIcon />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {!goalCollapsed && (
+              <div className="tree-node__children">
+                <p className="goals-tree__branch-label" style={{ margin: '8px 0' }}>Оперативні цілі</p>
+
+                {(goal.operationalGoals || []).map((op, opIndex) => {
+                  const opCollapsed = isCollapsed(op.id)
+                  const isEditingOp = editingId === op.id
+
+                  return (
+                    <div key={op.id} id={`goal-${op.id}`} className="tree-node">
+                      <div className="tree-node__header" style={{ display: 'flex', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="edit-tree__collapse-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleCollapse(op.id)
+                          }}
+                          style={{ padding: 0, marginRight: '4px' }}
+                        >
+                          <span className={`chevron ${!opCollapsed ? 'expanded' : ''}`}>▶</span>
+                        </button>
+                        
+                        <span className="node-badge node-badge--operational" style={{ marginRight: '8px' }}>
+                          Операційна ціль
+                        </span>
+
+                        {isEditingOp ? (
+                          <div className="edit-tree__editor-fields" onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                            <input
+                              type="text"
+                              className="edit-tree__input edit-tree__input--label"
+                              value={editFields.label}
+                              onChange={(e) => setEditFields(prev => ({ ...prev, label: e.target.value }))}
+                              placeholder="№"
+                              style={{ width: '60px' }}
+                            />
+                            <input
+                              type="text"
+                              className="edit-tree__input edit-tree__input--title"
+                              value={editFields.title}
+                              onChange={(e) => setEditFields(prev => ({ ...prev, title: e.target.value }))}
+                              placeholder="Назва оперативної цілі"
+                              autoFocus
+                              style={{ flex: 1 }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="edit-tree__text-content" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                            <span className="edit-tree__label-num" style={{ fontWeight: '700' }}>
+                              {op.label ? `${op.label}. ` : ''}
+                            </span>
+                            <span className="node-title">
+                              {op.title || 'Без назви'}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="edit-tree__node-actions" onClick={(e) => e.stopPropagation()} style={{ marginLeft: 'auto' }}>
+                          {isEditingOp ? (
+                            <>
+                              <button type="button" className="edit-tree__action-btn edit-tree__action-btn--save" onClick={() => saveEdit(op.id)} title="Зберегти">
+                                <CheckIcon />
+                              </button>
+                              <button type="button" className="edit-tree__action-btn edit-tree__action-btn--cancel" onClick={cancelEdit} title="Скасувати">
+                                <CancelIcon />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" className="edit-tree__action-btn" onClick={() => startEdit(op)} title="Редагувати">
+                                <EditIcon />
+                              </button>
+                              <button type="button" className="edit-tree__action-btn" onClick={() => onMove(op.id, 'up')} disabled={opIndex === 0} title="Перемістити вгору">
+                                <MoveUpIcon />
+                              </button>
+                              <button type="button" className="edit-tree__action-btn" onClick={() => onMove(op.id, 'down')} disabled={opIndex === goal.operationalGoals.length - 1} title="Перемістити вниз">
+                                <MoveDownIcon />
+                              </button>
+                              <button type="button" className="edit-tree__action-btn edit-tree__action-btn--danger" onClick={() => { if(confirm('Ви впевнені, що хочете видалити цю оперативну ціль та всі її завдання?')) onDelete(op.id) }} title="Видалити">
+                                <DeleteIcon />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {!opCollapsed && (
+                        <div className="tree-node__children">
+                          {(op.programTasks || []).map((task, tIndex) => {
+                            const isEditingTask = editingId === task.id
+
+                            return (
+                              <div key={task.id}>
+                                <div className="tree-node--leaf" style={{ display: 'flex', alignItems: 'flex-start' }}>
+                                  <span className="leaf-dot" style={{ marginRight: '4px' }}>•</span>
+                                  <span className="node-badge node-badge--task" style={{ marginRight: '8px', marginTop: '2px' }}>
+                                    Завдання
+                                  </span>
+                                  
+                                  {isEditingTask ? (
+                                    <div className="edit-tree__editor-fields" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                      <input
+                                        type="text"
+                                        className="edit-tree__input edit-tree__input--label"
+                                        value={editFields.label}
+                                        onChange={(e) => setEditFields(prev => ({ ...prev, label: e.target.value }))}
+                                        placeholder="№"
+                                        style={{ width: '100px' }}
+                                      />
+                                      <textarea
+                                        className="edit-tree__textarea"
+                                        value={editFields.description}
+                                        onChange={(e) => setEditFields(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Опис завдання"
+                                        rows="2"
+                                        autoFocus
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="edit-tree__text-content" style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flex: 1 }}>
+                                      <strong className="edit-tree__task-label" style={{ fontFamily: 'monospace' }}>
+                                        {task.label ? `${task.label}. ` : ''}
+                                      </strong>
+                                      <span className="node-desc">
+                                        {task.description || 'Без опису'}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <div className="edit-tree__node-actions" style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
+                                    {isEditingTask ? (
+                                      <>
+                                        <button type="button" className="edit-tree__action-btn edit-tree__action-btn--save" onClick={() => saveEdit(task.id)} title="Зберегти">
+                                          <CheckIcon />
+                                        </button>
+                                        <button type="button" className="edit-tree__action-btn edit-tree__action-btn--cancel" onClick={cancelEdit} title="Скасувати">
+                                          <CancelIcon />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button type="button" className="edit-tree__action-btn" onClick={() => startEdit(task)} title="Редагувати">
+                                          <EditIcon />
+                                        </button>
+                                        <button type="button" className="edit-tree__action-btn" onClick={() => onMove(task.id, 'up')} disabled={tIndex === 0} title="Перемістити вгору">
+                                          <MoveUpIcon />
+                                        </button>
+                                        <button type="button" className="edit-tree__action-btn" onClick={() => onMove(task.id, 'down')} disabled={tIndex === op.programTasks.length - 1} title="Перемістити вниз">
+                                          <MoveDownIcon />
+                                        </button>
+                                        <button type="button" className="edit-tree__action-btn edit-tree__action-btn--danger" onClick={() => onDelete(task.id)} title="Видалити">
+                                          <DeleteIcon />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {tIndex < op.programTasks.length - 1 && (
+                                  <div
+                                    className="tree-insert-line tree-insert-line--task"
+                                    onClick={() => onInsert(task.id, 'task')}
+                                    title="Вставити завдання сюди"
+                                    style={{ marginLeft: '20px' }}
+                                  >
+                                    <div className="tree-insert-line__bar"></div>
+                                    <span className="tree-insert-line__btn">+</span>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+
+                          <button
+                            type="button"
+                            className="edit-tree__append-btn"
+                            onClick={() => onAddTask(op.id)}
+                            style={{ marginLeft: '20px' }}
+                          >
+                            + Додати завдання
+                          </button>
+                        </div>
+                      )}
+
+                      {opIndex < goal.operationalGoals.length - 1 && (
+                        <div
+                          className="tree-insert-line tree-insert-line--operational"
+                          onClick={() => onInsert(op.id, 'operational')}
+                          title="Вставити оперативну ціль сюди"
+                          style={{ marginLeft: '12px' }}
+                        >
+                          <div className="tree-insert-line__bar"></div>
+                          <span className="tree-insert-line__btn">+</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                <button
+                  type="button"
+                  className="edit-tree__append-btn edit-tree__append-btn--op"
+                  onClick={() => onAddOperational(goal.id)}
+                  style={{ marginLeft: '12px' }}
+                >
+                  + Додати оперативну ціль
+                </button>
+              </div>
+            )}
+
+            {gIndex < strategicGoals.length - 1 && (
+              <div
+                className="tree-insert-line tree-insert-line--strategic"
+                onClick={() => onInsert(goal.id, 'strategic')}
+                title="Вставити стратегічну ціль сюди"
+              >
+                <div className="tree-insert-line__bar"></div>
+                <span className="tree-insert-line__btn">+</span>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <button
+        type="button"
+        className="edit-tree__append-btn edit-tree__append-btn--strategic"
+        onClick={onAddStrategic}
+        style={{ marginTop: '16px' }}
+      >
+        + Додати стратегічну ціль
+      </button>
+    </div>
   )
 }

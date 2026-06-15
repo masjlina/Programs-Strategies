@@ -141,6 +141,10 @@ public class DocumentParser
                 foreach (var pageLine in ExtractPdfLines(page))
                 {
                     var cleanLine = pageLine.Trim();
+                    if (path.Contains("plan-zakhodiv-na-2025-2027-roki.pdf"))
+                    {
+                        Console.WriteLine($"[PAGE {i} LINE] '{cleanLine}'");
+                    }
                     if (string.IsNullOrEmpty(cleanLine)) continue;
                     
                     // Filter headers/footers/page numbers
@@ -180,52 +184,14 @@ public class DocumentParser
         }
         rows = rows.OrderByDescending(r => r.Y).ToList();
 
-        var lefts = words.Select(w => w.BoundingBox.Left).ToList();
-        var bins = lefts.GroupBy(x => Math.Round(x / 10.0) * 10.0)
-                       .Select(g => new { Bin = g.Key, Count = g.Count() })
-                       .OrderBy(g => g.Bin)
-                       .ToList();
-
-        var peaks = new List<double>();
-        for (int i = 0; i < bins.Count; i++)
-        {
-            var bin = bins[i];
-            if (bin.Count >= 5)
-            {
-                bool isLocalMax = true;
-                if (i > 0 && bins[i - 1].Count > bin.Count) isLocalMax = false;
-                if (i < bins.Count - 1 && bins[i + 1].Count > bin.Count) isLocalMax = false;
-                if (isLocalMax)
-                {
-                    peaks.Add(bin.Bin);
-                }
-            }
-        }
-
-        if (peaks.Count < 3)
-        {
-            return rows
-                .Select(row => string.Join(" ", row.Words
-                    .OrderBy(word => word.BoundingBox.Left)
-                    .Select(word => word.Text)))
-                .Select(NormalizeWhitespace)
-                .Where(line => !string.IsNullOrWhiteSpace(line))
-                .ToList();
-        }
-
-        peaks = peaks.OrderBy(p => p).ToList();
-        var boundaries = new List<double>();
-        for (int i = 0; i < peaks.Count - 1; i++)
-        {
-            boundaries.Add((peaks[i] + peaks[i + 1]) / 2.0);
-        }
-
         double gapThreshold = 12.0;
-        var gridRows = new List<GridRow>();
+        var rowCellBlocks = new List<(List<PdfTableCell> Cells, List<UglyToad.PdfPig.Content.Word> OriginalWords)>();
 
-        foreach (var row in rows)
+        foreach (var r in rows)
         {
-            var sortedWords = row.Words.OrderBy(w => w.BoundingBox.Left).ToList();
+            var sortedWords = r.Words.OrderBy(w => w.BoundingBox.Left).ToList();
+            if (sortedWords.Count == 0) continue;
+
             var rowCells = new List<PdfTableCell>();
             var currentWords = new List<UglyToad.PdfPig.Content.Word> { sortedWords[0] };
 
@@ -243,6 +209,80 @@ public class DocumentParser
                 currentWords.Add(curr);
             }
             rowCells.Add(new PdfTableCell(currentWords));
+            rowCellBlocks.Add((rowCells, r.Words));
+        }
+
+        var cellStarts = new List<double>();
+        foreach (var r in rowCellBlocks)
+        {
+            if (r.Cells.Count >= 2)
+            {
+                foreach (var cell in r.Cells)
+                {
+                    cellStarts.Add(cell.MinX);
+                }
+            }
+            else
+            {
+                foreach (var cell in r.Cells)
+                {
+                    double cellWidth = cell.MaxX - cell.MinX;
+                    if (cellWidth < page.Width * 0.7)
+                    {
+                        cellStarts.Add(cell.MinX);
+                    }
+                }
+            }
+        }
+
+        var peaks = new List<double>();
+        if (cellStarts.Count > 0)
+        {
+            var sortedStarts = cellStarts.OrderBy(x => x).ToList();
+            var currentCluster = new List<double> { sortedStarts[0] };
+
+            for (int i = 1; i < sortedStarts.Count; i++)
+            {
+                if (sortedStarts[i] - sortedStarts[i - 1] < 20.0)
+                {
+                    currentCluster.Add(sortedStarts[i]);
+                }
+                else
+                {
+                    peaks.Add(currentCluster.Average());
+                    currentCluster.Clear();
+                    currentCluster.Add(sortedStarts[i]);
+                }
+            }
+            if (currentCluster.Count > 0)
+            {
+                peaks.Add(currentCluster.Average());
+            }
+        }
+
+        if (peaks.Count < 2)
+        {
+            return rows
+                .Select(row => string.Join(" ", row.Words
+                    .OrderBy(word => word.BoundingBox.Left)
+                    .Select(word => word.Text)))
+                .Select(NormalizeWhitespace)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToList();
+        }
+
+        peaks = peaks.OrderBy(p => p).ToList();
+        var boundaries = new List<double>();
+        for (int i = 0; i < peaks.Count - 1; i++)
+        {
+            boundaries.Add((peaks[i] + peaks[i + 1]) / 2.0);
+        }
+
+        var gridRows = new List<GridRow>();
+
+        foreach (var r in rowCellBlocks)
+        {
+            var rowCells = r.Cells;
 
             bool isSpanning = false;
             foreach (var cell in rowCells)
@@ -256,7 +296,7 @@ public class DocumentParser
 
             if (isSpanning)
             {
-                var flatLine = string.Join(" ", row.Words
+                var flatLine = string.Join(" ", r.OriginalWords
                     .OrderBy(w => w.BoundingBox.Left)
                     .Select(w => w.Text));
                 gridRows.Add(new GridRow { IsSpanning = true, FlatText = flatLine });
@@ -285,14 +325,77 @@ public class DocumentParser
             }
         }
 
-        var mergedLines = new List<string>();
-        string[] currentMergedRow = null;
-
         var sgRegex = new Regex(@"^\s*(?:Стратегічна ціль|СТРАТЕГІЧНА ЦІЛЬ|Стратегічний напрямок|Стратегічний пріоритет|Пріоритетний напрям|Напрям|Пріоритет)\s+(\d+|[I|V|X]+)", RegexOptions.IgnoreCase);
         var ogRegex = new Regex(@"^\s*(?:Операційна ціль|Оперативна ціль|Ціль)\s+(\d+\.\d+)", RegexOptions.IgnoreCase);
         var ogNumberOnlyRegex = new Regex(@"^\s*(\d+\.\d+)(?!\.\d)\b");
         var taskRegex = new Regex(@"^\s*(?:Завдання|Захід|Проект|Проєкт)\s+(\d+\.\d+\.\d+|\d+)", RegexOptions.IgnoreCase);
         var taskNumberOnlyRegex = new Regex(@"^\s*(\d+\.\d+\.\d+(?:\.\d+)*)\b");
+
+        // Pre-merge column-based vertical cell continuations
+        if (peaks.Count >= 2)
+        {
+            var lastNonEmptyRow = new int[peaks.Count];
+            for (int c = 0; c < peaks.Count; c++) lastNonEmptyRow[c] = -1;
+
+            for (int rIndex = 0; rIndex < gridRows.Count; rIndex++)
+            {
+                var gridRow = gridRows[rIndex];
+                if (gridRow.IsSpanning || gridRow.Cells == null) continue;
+
+                for (int c = 0; c < peaks.Count; c++)
+                {
+                    var cellText = gridRow.Cells[c].Trim();
+                    if (string.IsNullOrEmpty(cellText)) continue;
+
+                    int prevR = lastNonEmptyRow[c];
+                    if (prevR >= 0)
+                    {
+                        var prevText = gridRows[prevR].Cells![c];
+                        
+                        bool startsNewItem = false;
+                        if (c == 0)
+                        {
+                            startsNewItem = sgRegex.IsMatch(cellText) || 
+                                            ogRegex.IsMatch(cellText) || 
+                                            ogNumberOnlyRegex.IsMatch(cellText) ||
+                                            taskRegex.IsMatch(cellText) ||
+                                            taskNumberOnlyRegex.IsMatch(cellText);
+                        }
+                        else if (c == 1)
+                        {
+                            startsNewItem = taskRegex.IsMatch(cellText) || 
+                                            taskNumberOnlyRegex.IsMatch(cellText) ||
+                                            sgRegex.IsMatch(cellText) || 
+                                            ogRegex.IsMatch(cellText);
+                        }
+
+                        bool isCont = false;
+                        if (!startsNewItem)
+                        {
+                            isCont = char.IsLower(cellText[0]) || 
+                                     (prevText.Length > 0 && !".!?;;".Contains(prevText.TrimEnd().Last()) && !Regex.IsMatch(cellText, @"^\d"));
+                        }
+
+                        if (isCont)
+                        {
+                            gridRows[prevR].Cells[c] = (prevText + " " + cellText).Trim();
+                            gridRow.Cells[c] = "";
+                        }
+                        else
+                        {
+                            lastNonEmptyRow[c] = rIndex;
+                        }
+                    }
+                    else
+                    {
+                        lastNonEmptyRow[c] = rIndex;
+                    }
+                }
+            }
+        }
+
+        var mergedLines = new List<string>();
+        string[] currentMergedRow = null;
 
         bool StartsNewRow(string[] row)
         {
@@ -444,10 +547,19 @@ public class DocumentParser
         OperationalGoalDto? currentOG = null;
         bool isInTasksSection = false;
 
+        var structureStrategicGoals = new HashSet<StrategicGoalDto>();
+        var structureOperationalGoals = new HashSet<OperationalGoalDto>();
+        var structureTasks = new HashSet<ProgramTaskDto>();
+        bool isInStructureSection = false;
+        string activeStructureTableNumber = "";
+
+        var structureHeaderRegex = new Regex(@"(?:Структура|Матриця|Дерево|Система)\s+(?:стратегічних|оперативних|цілей|завдань|напрямів)", RegexOptions.IgnoreCase);
+        var structureEndRegex = new Regex(@"^(Фінансове|Моніторинг|Реалізація|Впровадження|РОЗДІЛ\s+[I|V|X|L|\d]+|Розділ\s+[I|V|X|L|\d]+)", RegexOptions.IgnoreCase);
+
         // Regex patterns with ^ anchors and lookaheads
-        var sgRegex = new Regex(@"^\s*(?:Стратегічна ціль|СТРАТЕГІЧНА ЦІЛЬ|Стратегічний напрямок|Стратегічний пріоритет|Пріоритетний напрям|Напрям|Пріоритет)\s+(\d+|[I|V|X]+)[\.:\s]*\s*(.*)$", RegexOptions.IgnoreCase);
-        var ogRegex = new Regex(@"^\s*(?:Операційна ціль|Оперативна ціль|Ціль)\s+(\d+\.\d+)[\.:\s]*\s*(.*)$", RegexOptions.IgnoreCase);
-        var ogNumberOnlyRegex = new Regex(@"^\s*(\d+\.\d+)(?!\.\d)\b\.?\s*(.*)$");
+        var sgRegex = new Regex(@"^\s*(?:Стратегічна ціль|СТРАТЕГІЧНА ЦІЛЬ|Стратегічний напрямок|Стратегічний пріоритет|Пріоритетний напрям|Напрям|Пріоритет)\s+(\d+|[I|V|X]+)[\.:\s]*(?!\p{Ll})\s*(.*)$", RegexOptions.IgnoreCase);
+        var ogRegex = new Regex(@"^\s*(?:Операційна ціль|Оперативна ціль|Ціль)\s+(\d+\.\d+)[\.:\s]*(?!\p{Ll})\s*(.*)$", RegexOptions.IgnoreCase);
+        var ogNumberOnlyRegex = new Regex(@"^\s*(\d+\.\d+)(?!\.\d)\b\.?\s*(?!\p{Ll})(.*)$");
         
         var taskRegex = new Regex(@"^\s*(?:Завдання|Захід|Проект|Проєкт)\s+(\d+\.\d+\.\d+|\d+)[\.:\s]*\s*(.*)$", RegexOptions.IgnoreCase);
         var taskNumberOnlyRegex = new Regex(@"^\s*(\d+\.\d+\.\d+(?:\.\d+)*)\b\.?\s*(.*)$");
@@ -473,6 +585,26 @@ public class DocumentParser
                    taskNumberOnlyRegex.IsMatch(t);
         }
 
+        bool IsLikelyGoalContinuation(string currentTitle, string nextLine)
+        {
+            if (string.IsNullOrEmpty(currentTitle) || string.IsNullOrEmpty(nextLine)) return false;
+            
+            var trimmedNext = nextLine.Trim();
+            if (trimmedNext.Length == 0) return false;
+
+            if (IsGoalOrTaskLine(trimmedNext) || tocLeaderRegex.IsMatch(trimmedNext)) return false;
+            
+            var lineWithoutNumber = Regex.Replace(trimmedNext, @"^\s*\d+(?:\.\d+)*\.?\s*", "");
+            if (strategySectionRegex.IsMatch(lineWithoutNumber) || docSectionRegex.IsMatch(lineWithoutNumber)) return false;
+
+            if (char.IsLower(trimmedNext[0])) return true;
+
+            var lastWordMatch = Regex.Match(currentTitle, @"\b(та|і|й|а|але|чи|або|з|в|у|на|для|під|над|по|також)\s*$", RegexOptions.IgnoreCase);
+            if (lastWordMatch.Success) return true;
+
+            return false;
+        }
+
         for (int i = 0; i < lines.Count; i++)
         {
             var trimmedLine = lines[i].Trim();
@@ -481,15 +613,57 @@ public class DocumentParser
             // Skip lines that are clearly from Table of Contents (have leader characters + page numbers at the end)
             if (tocLeaderRegex.IsMatch(trimmedLine)) continue;
 
+            if (structureHeaderRegex.IsMatch(trimmedLine))
+            {
+                isInStructureSection = true;
+                Console.WriteLine($"[DEBUG] ENTER structure section on line: {trimmedLine}");
+                
+                var tableNumMatch = Regex.Match(trimmedLine, @"Таблиця\s*(\d+(?:\.\d+)?)", RegexOptions.IgnoreCase);
+                if (tableNumMatch.Success)
+                {
+                    activeStructureTableNumber = tableNumMatch.Groups[1].Value;
+                    Console.WriteLine($"[DEBUG] Detected structure table number: {activeStructureTableNumber}");
+                }
+                else
+                {
+                    activeStructureTableNumber = "";
+                }
+            }
+            else if (isInStructureSection)
+            {
+                bool shouldExit = false;
+                var tableMatch = Regex.Match(trimmedLine, @"^Таблиця\s*(\d+(?:\.\d+)?)", RegexOptions.IgnoreCase);
+                if (tableMatch.Success)
+                {
+                    var tableNum = tableMatch.Groups[1].Value;
+                    if (tableNum != activeStructureTableNumber)
+                    {
+                        shouldExit = true;
+                    }
+                }
+                else if (structureEndRegex.IsMatch(trimmedLine))
+                {
+                    shouldExit = true;
+                }
+
+                if (shouldExit)
+                {
+                    isInStructureSection = false;
+                    activeStructureTableNumber = "";
+                    Console.WriteLine($"[DEBUG] EXIT structure section on line: {trimmedLine}");
+                }
+            }
+
             var lineWithoutNumber = Regex.Replace(
                 trimmedLine,
                 @"^\s*\d+(?:\.\d+)*\.?\s*",
                 "");
-            if (strategySectionRegex.IsMatch(lineWithoutNumber) || docSectionRegex.IsMatch(lineWithoutNumber))
+            if (!structureHeaderRegex.IsMatch(trimmedLine) && (strategySectionRegex.IsMatch(lineWithoutNumber) || docSectionRegex.IsMatch(lineWithoutNumber)))
             {
                 currentSG = null;
                 currentOG = null;
                 isInTasksSection = false;
+                isInStructureSection = false;
                 continue;
             }
 
@@ -500,14 +674,30 @@ public class DocumentParser
                 var label = sgMatch.Groups[1].Value.Trim();
                 var title = sgMatch.Groups[2].Value.Trim();
 
-                // Multiline header support: look ahead if title is empty
-                if (string.IsNullOrEmpty(title) && i + 1 < lines.Count)
+                // Multiline header support: look ahead if title is empty or next line is a continuation
+                while (i + 1 < lines.Count)
                 {
                     var nextLine = lines[i + 1].Trim();
-                    if (!IsGoalOrTaskLine(nextLine) && !tocLeaderRegex.IsMatch(nextLine) && nextLine.Length > 0)
+                    if (string.IsNullOrEmpty(title))
                     {
-                        title = nextLine;
-                        i++; // consume
+                        if (!IsGoalOrTaskLine(nextLine) && !tocLeaderRegex.IsMatch(nextLine) && nextLine.Length > 0)
+                        {
+                            title = nextLine;
+                            i++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else if (IsLikelyGoalContinuation(title, nextLine))
+                    {
+                        title = JoinTaskText(title, nextLine);
+                        i++;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
@@ -530,6 +720,10 @@ public class DocumentParser
                     Title = title
                 };
                 strategicGoals.Add(currentSG);
+                if (isInStructureSection)
+                {
+                    structureStrategicGoals.Add(currentSG);
+                }
                 currentOG = null;
                 isInTasksSection = false;
                 continue;
@@ -568,14 +762,30 @@ public class DocumentParser
 
             if (isOg)
             {
-                // Multiline header support: look ahead if title is empty
-                if (string.IsNullOrEmpty(ogTitle) && i + 1 < lines.Count)
+                // Multiline header support: look ahead if title is empty or next line is a continuation
+                while (i + 1 < lines.Count)
                 {
                     var nextLine = lines[i + 1].Trim();
-                    if (!IsGoalOrTaskLine(nextLine) && !tocLeaderRegex.IsMatch(nextLine) && nextLine.Length > 0)
+                    if (string.IsNullOrEmpty(ogTitle))
                     {
-                        ogTitle = nextLine;
-                        i++; // consume
+                        if (!IsGoalOrTaskLine(nextLine) && !tocLeaderRegex.IsMatch(nextLine) && nextLine.Length > 0)
+                        {
+                            ogTitle = nextLine;
+                            i++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else if (IsLikelyGoalContinuation(ogTitle, nextLine))
+                    {
+                        ogTitle = JoinTaskText(ogTitle, nextLine);
+                        i++;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
@@ -601,6 +811,10 @@ public class DocumentParser
                         Title = ogTitle
                     };
                     currentSG.OperationalGoals.Add(currentOG);
+                    if (isInStructureSection)
+                    {
+                        structureOperationalGoals.Add(currentOG);
+                    }
                     isInTasksSection = false;
                 }
                 continue;
@@ -634,6 +848,56 @@ public class DocumentParser
             if (isTask && string.IsNullOrWhiteSpace(taskDesc))
             {
                 continue;
+            }
+
+            if (isTask)
+            {
+                var parts = taskLabel.Split('.');
+                if (parts.Length >= 2)
+                {
+                    var parentSgLabel = parts[0];
+                    var parentOgLabel = string.Join(".", parts.Take(parts.Length - 1));
+
+                    var matchingSg = strategicGoals.FirstOrDefault(g => g.Label.Equals(parentSgLabel, StringComparison.OrdinalIgnoreCase));
+                    if (matchingSg == null)
+                    {
+                        int num = 0;
+                        int.TryParse(parentSgLabel, out num);
+                        if (num == 0) num = ParseRomanNumeral(parentSgLabel);
+                        matchingSg = new StrategicGoalDto
+                        {
+                            Label = parentSgLabel,
+                            Number = num > 0 ? num : (strategicGoals.Count + 1),
+                            Title = ""
+                        };
+                        strategicGoals.Add(matchingSg);
+                        if (isInStructureSection)
+                        {
+                            structureStrategicGoals.Add(matchingSg);
+                        }
+                    }
+
+                    var matchingOg = matchingSg.OperationalGoals.FirstOrDefault(g => g.Label.Equals(parentOgLabel, StringComparison.OrdinalIgnoreCase));
+                    if (matchingOg == null)
+                    {
+                        int num = 1;
+                        if (parts.Length > 1) int.TryParse(parts[1], out num);
+                        matchingOg = new OperationalGoalDto
+                        {
+                            Label = parentOgLabel,
+                            Number = num,
+                            Title = ""
+                        };
+                        matchingSg.OperationalGoals.Add(matchingOg);
+                        if (isInStructureSection)
+                        {
+                            structureOperationalGoals.Add(matchingOg);
+                        }
+                    }
+
+                    currentSG = matchingSg;
+                    currentOG = matchingOg;
+                }
             }
 
             if (isTask && currentOG != null)
@@ -690,6 +954,11 @@ public class DocumentParser
                         Description = taskDesc
                     };
                     currentOG.ProgramTasks.Add(task);
+                    if (isInStructureSection)
+                    {
+                        structureTasks.Add(task);
+                        Console.WriteLine($"[DEBUG] Added structure task: {task.Label} - {task.Description}");
+                    }
                 }
                 continue;
             }
@@ -702,7 +971,7 @@ public class DocumentParser
             }
 
             // 5. Continue the preceding numbered task across wrapped lines.
-            if (isInTasksSection && currentOG != null)
+            if ((isInTasksSection || isInStructureSection) && currentOG != null)
             {
                 if (skipTaskKeywords.IsMatch(trimmedLine)) continue;
                 if (trimmedLine.Length < 5) continue; // too short to be a task
@@ -727,17 +996,22 @@ public class DocumentParser
                     previousTask.Description = JoinTaskText(previousTask.Description, cleanDesc);
                 }
                 else if (allowUnnumberedTasks &&
-                         !string.IsNullOrEmpty(cleanDesc) &&
-                         !skipTaskKeywords.IsMatch(cleanDesc) &&
-                         !docSectionRegex.IsMatch(cleanDesc))
+                          !string.IsNullOrEmpty(cleanDesc) &&
+                          !skipTaskKeywords.IsMatch(cleanDesc) &&
+                          !docSectionRegex.IsMatch(cleanDesc))
                 {
                     var taskIndex = currentOG.ProgramTasks.Count + 1;
-                    currentOG.ProgramTasks.Add(new ProgramTaskDto
+                    var task = new ProgramTaskDto
                     {
                         Label = $"{currentOG.Label}.{taskIndex}",
                         Number = taskIndex,
                         Description = cleanDesc
-                    });
+                    };
+                    currentOG.ProgramTasks.Add(task);
+                    if (isInStructureSection)
+                    {
+                        structureTasks.Add(task);
+                    }
                 }
             }
         }
@@ -748,18 +1022,49 @@ public class DocumentParser
             sg.OperationalGoals = sg.OperationalGoals
                 .GroupBy(og => og.Label, StringComparer.OrdinalIgnoreCase)
                 .Select(g => {
+                    if (structureOperationalGoals.Count > 0 && !g.Any(x => structureOperationalGoals.Contains(x)))
+                    {
+                        return null;
+                    }
+
                     var primary = g
-                        .OrderBy(x => GoalTitleScore(x.Title))
+                        .OrderBy(x => {
+                            bool isStruct = structureOperationalGoals.Contains(x);
+                            return (isStruct ? 0 : 5000) + GoalTitleScore(x.Title);
+                        })
                         .First();
+
+                    var bestTitle = g
+                        .Select(x => x.Title)
+                        .Where(t => !string.IsNullOrEmpty(t) && t.Length < 250)
+                        .OrderByDescending(t => t.Length)
+                        .FirstOrDefault() ?? primary.Title;
+                    primary.Title = bestTitle;
+
                     var allTasks = g
                         .SelectMany(x => x.ProgramTasks)
                         .GroupBy(t => t.Label, StringComparer.OrdinalIgnoreCase)
-                        .Select(gt => gt.OrderByDescending(t => t.Description.Length).First())
+                        .Select(gt => {
+                            var structTasksInGroup = gt
+                                .Where(task => structureTasks.Contains(task))
+                                .ToList();
+                            if (structureTasks.Count > 0 && structTasksInGroup.Count == 0)
+                            {
+                                return null;
+                            }
+                            return structTasksInGroup.Count > 0
+                                ? structTasksInGroup.OrderByDescending(t => t.Description.Length).First()
+                                : gt.OrderByDescending(t => t.Description.Length).First();
+                        })
+                        .Where(t => t != null)
+                        .Select(t => t!)
                         .OrderBy(t => t.Number)
                         .ToList();
                     primary.ProgramTasks = allTasks;
                     return primary;
                 })
+                .Where(og => og != null)
+                .Select(og => og!)
                 .Where(og => og.ProgramTasks.Count > 0)
                 .ToList();
         }
@@ -768,29 +1073,78 @@ public class DocumentParser
             .GroupBy(sg => sg.Label, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
+                if (structureStrategicGoals.Count > 0 && !group.Any(x => structureStrategicGoals.Contains(x)))
+                {
+                    return null;
+                }
+
                 var primary = group
-                    .OrderBy(goal => GoalTitleScore(goal.Title))
+                    .OrderBy(goal => {
+                        bool isStruct = structureStrategicGoals.Contains(goal);
+                        return (isStruct ? 0 : 5000) + GoalTitleScore(goal.Title);
+                    })
                     .First();
+
+                var bestTitle = group
+                    .Select(x => x.Title)
+                    .Where(t => !string.IsNullOrEmpty(t) && t.Length < 250)
+                    .OrderByDescending(t => t.Length)
+                    .FirstOrDefault() ?? primary.Title;
+                primary.Title = bestTitle;
+
                 primary.OperationalGoals = group
                     .SelectMany(goal => goal.OperationalGoals)
                     .GroupBy(goal => goal.Label, StringComparer.OrdinalIgnoreCase)
                     .Select(operationalGroup =>
                     {
+                        if (structureOperationalGoals.Count > 0 && !operationalGroup.Any(x => structureOperationalGoals.Contains(x)))
+                        {
+                            return null;
+                        }
+
                         var operationalPrimary = operationalGroup
-                            .OrderBy(goal => GoalTitleScore(goal.Title))
+                            .OrderBy(goal => {
+                                bool isStruct = structureOperationalGoals.Contains(goal);
+                                return (isStruct ? 0 : 5000) + GoalTitleScore(goal.Title);
+                            })
                             .First();
+
+                        var bestOpTitle = operationalGroup
+                            .Select(x => x.Title)
+                            .Where(t => !string.IsNullOrEmpty(t) && t.Length < 250)
+                            .OrderByDescending(t => t.Length)
+                            .FirstOrDefault() ?? operationalPrimary.Title;
+                        operationalPrimary.Title = bestOpTitle;
+
                         operationalPrimary.ProgramTasks = operationalGroup
                             .SelectMany(goal => goal.ProgramTasks)
                             .GroupBy(task => task.Label, StringComparer.OrdinalIgnoreCase)
-                            .Select(taskGroup => taskGroup.OrderByDescending(task => task.Description.Length).First())
+                            .Select(taskGroup => {
+                                var structTasksInGroup = taskGroup
+                                    .Where(task => structureTasks.Contains(task))
+                                    .ToList();
+                                if (structureTasks.Count > 0 && structTasksInGroup.Count == 0)
+                                {
+                                    return null;
+                                }
+                                return structTasksInGroup.Count > 0
+                                    ? structTasksInGroup.OrderByDescending(t => t.Description.Length).First()
+                                    : taskGroup.OrderByDescending(task => task.Description.Length).First();
+                            })
+                            .Where(task => task != null)
+                            .Select(task => task!)
                             .OrderBy(task => task.Number)
                             .ToList();
                         return operationalPrimary;
                     })
+                    .Where(goal => goal != null)
+                    .Select(goal => goal!)
                     .OrderBy(goal => goal.Number)
                     .ToList();
                 return primary;
             })
+            .Where(sg => sg != null)
+            .Select(sg => sg!)
             .Where(sg => sg.OperationalGoals.Count > 0)
             .OrderBy(sg => sg.Number)
             .ToList();
@@ -831,15 +1185,20 @@ public class DocumentParser
             return lines;
         }
 
-        var strategicGoalRegex = new Regex(
+        var tocGoalRegex = new Regex(
+            @"^\s*(?:Стратегічна ціль|Стратегічний напрямок|Стратегічний пріоритет|Пріоритетний напрям|Напрям|Пріоритет)\s+(\d+|[IVX]+)\b.*?(?:[\._~-]{3,}|\s+\d+\s*$)",
+            RegexOptions.IgnoreCase);
+
+        var bodyGoalRegex = new Regex(
             @"^\s*(?:Стратегічна ціль|Стратегічний напрямок|Стратегічний пріоритет|Пріоритетний напрям|Напрям|Пріоритет)\s+(\d+|[IVX]+)\b",
             RegexOptions.IgnoreCase);
 
         var firstGoalIndex = -1;
         var firstGoalLabel = "";
-        for (var i = tocIndex + 1; i < lines.Count; i++)
+        var searchLimit = Math.Min(lines.Count, tocIndex + 150);
+        for (var i = tocIndex + 1; i < searchLimit; i++)
         {
-            var match = strategicGoalRegex.Match(lines[i]);
+            var match = tocGoalRegex.Match(lines[i]);
             if (!match.Success) continue;
 
             firstGoalIndex = i;
@@ -854,7 +1213,7 @@ public class DocumentParser
 
         for (var i = firstGoalIndex + 1; i < lines.Count; i++)
         {
-            var match = strategicGoalRegex.Match(lines[i]);
+            var match = bodyGoalRegex.Match(lines[i]);
             if (match.Success &&
                 match.Groups[1].Value.Equals(firstGoalLabel, StringComparison.OrdinalIgnoreCase))
             {
