@@ -6,7 +6,7 @@ interface Unit {
   type: "Region" | "District" | "Community";
 }
 
-interface CatalogEntry {
+export interface CatalogEntry {
   id: string;
   city: string;
   unitId: string;
@@ -54,7 +54,7 @@ interface Strategy {
   strategicGoals?: StrategicGoal[];
 }
 
-interface StrategyResponse {
+export interface StrategyResponse {
   unit?: Unit;
   strategy: Strategy;
 }

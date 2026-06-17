@@ -31,6 +31,7 @@ interface CatalogEntry {
   title: string;
   summary: string;
   status: "active" | "archive";
+  period: string;
 }
 
 interface StrategyResultCardProps {

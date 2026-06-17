@@ -18,9 +18,9 @@ interface CatalogEntry {
   summary: string;
   directions: string[];
   status: "active" | "archive";
-  strategyUrl?: string | null;
-  officialSourceUrl?: string | null;
-  fileUrl?: string | null;
+  strategyUrl: string | null;
+  officialSourceUrl: string | null;
+  fileUrl: string | null;
 }
 
 interface Unit {
@@ -177,7 +177,7 @@ export function StrategyPage() {
 
         {loading && <p>Завантаження стратегії…</p>}
         {error && <p>{error}</p>}
-        {strategy && <StrategyGoalsTree strategy={strategy} />}
+        {strategy && <StrategyGoalsTree strategy={strategy as any} />}
       </div>
     </Container>
   );

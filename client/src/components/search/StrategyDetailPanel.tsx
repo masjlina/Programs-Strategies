@@ -1,30 +1,30 @@
 import { useMemo } from "react";
 import {
-  buildMeasureRows,
   computeDashboardMetrics,
 } from "../../lib/strategyMetrics";
-import { StrategyDashboard } from "./StrategyDashboard";
-import { StrategyMeasuresTable } from "./StrategyMeasuresTable";
 import { StrategyGoalsTree } from "./StrategyGoalsTree";
+import type { CatalogEntry, StrategyResponse } from "../../lib/strategies";
 
-export function StrategyDetailPanel({ catalogEntry, loaded, loading, error }) {
+interface StrategyDetailPanelProps {
+  catalogEntry: CatalogEntry;
+  loaded: StrategyResponse | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export function StrategyDetailPanel({
+  catalogEntry,
+  loaded,
+  loading,
+  error,
+}: StrategyDetailPanelProps) {
   const strategy = loaded?.strategy;
   const unitName = loaded?.unit?.name;
 
   const metrics = useMemo(() => {
     if (!strategy || !catalogEntry) return null;
-    return computeDashboardMetrics(strategy, catalogEntry);
+    return computeDashboardMetrics(strategy as any, catalogEntry);
   }, [strategy, catalogEntry]);
-
-  const measureRows = useMemo(() => {
-    if (!strategy || !catalogEntry) return [];
-    return buildMeasureRows(strategy, catalogEntry);
-  }, [strategy, catalogEntry]);
-
-  const directionLabel =
-    catalogEntry.directions?.[0] ??
-    measureRows[0]?.direction ??
-    "Загальний огляд";
 
   const sourceLink =
     catalogEntry.officialSourceUrl ?? strategy?.strategyUrl ?? null;
@@ -84,7 +84,7 @@ export function StrategyDetailPanel({ catalogEntry, loaded, loading, error }) {
 
       {/*<StrategyDashboard metrics={metrics} directionLabel={directionLabel} />*/}
       {/*<StrategyMeasuresTable rows={measureRows} />*/}
-      <StrategyGoalsTree strategy={strategy} />
+      <StrategyGoalsTree strategy={strategy as any} />
     </div>
   );
 }

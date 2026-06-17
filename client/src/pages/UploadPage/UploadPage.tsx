@@ -3,8 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Container } from '../../components/layout/Container'
 import { apiPost, fetchReferenceData, getUnitTypeLabel, apiUploadDocument } from '../../lib/api'
 import './UploadPage.css'
-import { StrategyGoalsTree } from '../../components/search/StrategyGoalsTree'
-import { normalizeStrategy } from '../../lib/strategies'
+
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +82,7 @@ interface EditFields {
 
 interface EditableGoalsTreeProps {
   strategy: ParsedStrategy
-  onUpdate: (id: string, fields: EditFields) => void
+
   onDelete: (id: string) => void
   onMove: (id: string, direction: MoveDirection) => void
   onInsert: (siblingId: string, type: InsertType) => void
@@ -1381,7 +1380,7 @@ export function UploadPage() {
                           {parsedStrategy.strategicGoals && parsedStrategy.strategicGoals.length > 0 ? (
                             <EditableGoalsTree
                               strategy={parsedStrategy}
-                              onUpdate={updateItem}
+
                               onDelete={deleteItem}
                               onMove={moveItem}
                               onInsert={insertAfter}
@@ -1418,7 +1417,7 @@ export function UploadPage() {
 
 function EditableGoalsTree({
   strategy,
-  onUpdate,
+
   onDelete,
   onMove,
   onInsert,

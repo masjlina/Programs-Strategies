@@ -14,10 +14,10 @@ interface UploadItem {
 }
 
 interface ReferenceData {
-  regions: unknown[];
-  districts: unknown[];
-  communities: unknown[];
-  strategies: unknown[];
+  regions: any[];
+  districts: any[];
+  communities: any[];
+  strategies: any[];
 }
 
 const UNIT_TYPE_LABELS: Record<UnitType, string> = {
