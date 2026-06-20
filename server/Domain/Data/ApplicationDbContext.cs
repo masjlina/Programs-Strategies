@@ -10,6 +10,8 @@ public class ApplicationDbContext : DbContext
     {
     }
 
+    public DbSet<User> Users { get; set; }
+    public DbSet<TokenInfo> TokenInfos { get; set; }
     public DbSet<Region> Regions { get; set; }
     public DbSet<District> Districts { get; set; }
     public DbSet<Community> Communities { get; set; }
@@ -21,6 +23,27 @@ public class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // User
+        modelBuilder.Entity<User>(e =>
+        {
+            ConfigureBaseEntity(e);
+            e.HasIndex(x => x.Email).IsUnique();
+            e.Property(x => x.Email).IsRequired().HasMaxLength(256);
+            e.Property(x => x.PasswordHash).IsRequired();
+            e.Property(x => x.Role).IsRequired().HasMaxLength(50);
+        });
+
+        // TokenInfo
+        modelBuilder.Entity<TokenInfo>(e =>
+        {
+            ConfigureBaseEntity(e);
+            e.Property(x => x.RefreshToken).IsRequired().HasMaxLength(512);
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Region
         modelBuilder.Entity<Region>(e =>
         {
