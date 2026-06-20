@@ -38,6 +38,7 @@ client/*.local
 *.userosscache
 *.sln.docstates
 server/WebAPI/appsettings.Development.json
+server/WebAPI/users.json
 
 # --- Logs & temp ---
 *.log

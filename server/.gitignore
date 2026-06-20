@@ -6,6 +6,7 @@
 # dotenv files
 .env
 WebAPI/appsettings.Development.json
+WebAPI/users.json
 
 ParserTester/*
 data/*
