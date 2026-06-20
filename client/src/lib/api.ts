@@ -1,3 +1,5 @@
+import { IS_DEMO_MODE, MOCK_REFERENCE_DATA } from "./mockData";
+
 const DEFAULT_API_BASE_URL = "http://localhost:5257";
 
 interface ApiError {
@@ -69,6 +71,10 @@ export async function apiPost<TResponse, TBody>(
 }
 
 export async function fetchReferenceData(): Promise<ReferenceData> {
+  if (IS_DEMO_MODE) {
+    return MOCK_REFERENCE_DATA as unknown as ReferenceData;
+  }
+
   const [regions, districts, communities, strategies] = await Promise.all([
     apiGet<unknown[]>("/api/Regions"),
     apiGet<unknown[]>("/api/Districts"),

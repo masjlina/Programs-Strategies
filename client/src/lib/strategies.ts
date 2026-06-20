@@ -1,4 +1,9 @@
 import { apiGet } from "./api";
+import {
+  IS_DEMO_MODE,
+  getMockCatalogEntry,
+  getMockStrategyResponse,
+} from "./mockData";
 
 interface Unit {
   id: string;
@@ -272,6 +277,8 @@ export async function searchStrategies(query: string): Promise<CatalogEntry[]> {
 export async function getCatalogEntryById(
   id: string,
 ): Promise<CatalogEntry | null> {
+  if (IS_DEMO_MODE) return getMockCatalogEntry(id);
+
   const [strategy, unitsById] = await Promise.all([
     getStrategyById(id),
     getUnitsMap(),
@@ -293,6 +300,13 @@ export async function getStrategiesByCity(
 export async function loadStrategyForCatalogEntry(
   catalogEntry: CatalogEntry,
 ): Promise<StrategyResponse> {
+  if (IS_DEMO_MODE) {
+    const response = getMockStrategyResponse(
+      catalogEntry.strategyId ?? catalogEntry.id,
+    );
+    if (response) return response;
+  }
+
   const [strategy, unitsById] = await Promise.all([
     getStrategyById(catalogEntry.strategyId ?? catalogEntry.id),
     getUnitsMap(),
