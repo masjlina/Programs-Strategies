@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import {
   computeDashboardMetrics,
+  buildMeasureRows,
 } from "../../lib/strategyMetrics";
 import { StrategyGoalsTree } from "./StrategyGoalsTree";
+import { StrategyDashboard } from "./StrategyDashboard";
+import { StrategyMeasuresTable } from "./StrategyMeasuresTable";
 import type { CatalogEntry, StrategyResponse } from "../../lib/strategies";
 
 interface StrategyDetailPanelProps {
@@ -24,6 +27,11 @@ export function StrategyDetailPanel({
   const metrics = useMemo(() => {
     if (!strategy || !catalogEntry) return null;
     return computeDashboardMetrics(strategy as any, catalogEntry);
+  }, [strategy, catalogEntry]);
+
+  const measureRows = useMemo(() => {
+    if (!strategy) return [];
+    return buildMeasureRows(strategy as any, catalogEntry);
   }, [strategy, catalogEntry]);
 
   const sourceLink =
@@ -57,7 +65,7 @@ export function StrategyDetailPanel({
         <div className="strategy-detail__actions">
           {fileDisabled ? (
             <span className="btn btn--outline btn--disabled">
-              Завантажити PDF (скоро)
+              PDF (скоро)
             </span>
           ) : (
             <a
@@ -76,14 +84,14 @@ export function StrategyDetailPanel({
               target="_blank"
               rel="noreferrer"
             >
-              Офіційне джерело
+              Джерело
             </a>
           )}
         </div>
       </header>
 
-      {/*<StrategyDashboard metrics={metrics} directionLabel={directionLabel} />*/}
-      {/*<StrategyMeasuresTable rows={measureRows} />*/}
+      <StrategyDashboard metrics={metrics} />
+      <StrategyMeasuresTable rows={measureRows} />
       <StrategyGoalsTree strategy={strategy as any} />
     </div>
   );

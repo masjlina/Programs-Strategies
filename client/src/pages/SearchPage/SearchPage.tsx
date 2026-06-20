@@ -1,11 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Container } from "../../components/layout/Container";
+import { StrategyDetailPanel } from "../../components/search/StrategyDetailPanel";
+import { StrategyResultCard } from "../../components/search/StrategyResultCard";
 import {
   buildUploadLink,
   fetchReferenceData,
   getUnitTypeLabel,
 } from "../../lib/api";
+import {
+  getCatalogEntryById,
+  loadStrategyForCatalogEntry,
+  type CatalogEntry,
+  type StrategyResponse,
+} from "../../lib/strategies";
 import "./SearchPage.css";
 
 type SelectedFilter = "all" | "community" | "district" | "region";
@@ -66,6 +74,18 @@ export function SearchPage() {
     useState<SelectedSort>("programs-desc");
   const [visibleCount, setVisibleCount] = useState<number>(30);
 
+  // --- Comparison state ---
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(
+    null,
+  );
+  const [selectedCatalogEntry, setSelectedCatalogEntry] =
+    useState<CatalogEntry | null>(null);
+  const [selectedLoaded, setSelectedLoaded] = useState<StrategyResponse | null>(
+    null,
+  );
+  const [selectedLoading, setSelectedLoading] = useState(false);
+  const [selectedError, setSelectedError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -92,6 +112,48 @@ export function SearchPage() {
       cancelled = true;
     };
   }, []);
+
+  // Load full strategy data when a strategy is selected for comparison
+  useEffect(() => {
+    if (!selectedStrategyId) {
+      setSelectedCatalogEntry(null);
+      setSelectedLoaded(null);
+      setSelectedError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setSelectedLoading(true);
+    setSelectedError(null);
+    setSelectedCatalogEntry(null);
+    setSelectedLoaded(null);
+
+    getCatalogEntryById(selectedStrategyId)
+      .then((entry) => {
+        if (!entry) {
+          if (!cancelled) setSelectedError("Стратегію не знайдено");
+          return null;
+        }
+        if (!cancelled) setSelectedCatalogEntry(entry);
+        return loadStrategyForCatalogEntry(entry);
+      })
+      .then((data) => {
+        if (!cancelled && data) setSelectedLoaded(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled)
+          setSelectedError(
+            err instanceof Error ? err.message : "Помилка завантаження",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setSelectedLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStrategyId]);
 
   const regionsMap = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -206,226 +268,307 @@ export function SearchPage() {
     [filteredAndSortedList, visibleCount],
   );
 
-  return (
-    <main className="search-hub">
-      <Container>
-        <header className="search-hub__hero">
-          <h1 className="search-hub__title">Перелік стратегічних документів</h1>
-          <p className="search-hub__subtitle muted">
-            Шукайте громади, райони та області для перегляду їхніх програм
-            розвитку або додавайте нові.
-          </p>
-        </header>
+  const closeDrawer = () => setSelectedStrategyId(null);
 
-        <section
-          className="search-hub__controls-card"
-          aria-label="Параметри пошуку"
-        >
-          <div className="search-bar-wrapper">
-            <input
-              className="search-hub__input-new"
-              type="text"
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearchQuery(e.target.value)
-              }
-              placeholder="Введіть назву громади, району, області чи тему програми (наприклад: Освіта)..."
-              aria-label="Пошук територіальних одиниць"
-            />
-            {searchQuery && (
+  return (
+    <>
+      <main className="search-hub">
+        <Container>
+          <header className="search-hub__hero">
+            <h1 className="search-hub__title">
+              Перелік стратегічних документів
+            </h1>
+            <p className="search-hub__subtitle muted">
+              Шукайте громади, райони та області для перегляду їхніх програм
+              розвитку або додавайте нові.
+            </p>
+          </header>
+
+          <section
+            className="search-hub__controls-card"
+            aria-label="Параметри пошуку"
+          >
+            <div className="search-bar-wrapper">
+              <input
+                className="search-hub__input-new"
+                type="text"
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSearchQuery(e.target.value)
+                }
+                placeholder="Введіть назву громади, району, області чи тему програми (наприклад: Освіта)..."
+                aria-label="Пошук територіальних одиниць"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Очистити пошук"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="controls-row">
+              <div className="filter-group">
+                <span className="controls-label">Тип одиниці:</span>
+                <div className="segmented-control">
+                  <button
+                    type="button"
+                    className={`segmented-btn ${selectedFilter === "all" ? "active" : ""}`}
+                    onClick={() => setSelectedFilter("all")}
+                  >
+                    Всі
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${selectedFilter === "community" ? "active" : ""}`}
+                    onClick={() => setSelectedFilter("community")}
+                  >
+                    Громади
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${selectedFilter === "district" ? "active" : ""}`}
+                    onClick={() => setSelectedFilter("district")}
+                  >
+                    Райони
+                  </button>
+                  <button
+                    type="button"
+                    className={`segmented-btn ${selectedFilter === "region" ? "active" : ""}`}
+                    onClick={() => setSelectedFilter("region")}
+                  >
+                    Області
+                  </button>
+                </div>
+              </div>
+
+              <div className="sort-group">
+                <label className="controls-label" htmlFor="sort-select">
+                  Сортування:
+                </label>
+                <select
+                  id="sort-select"
+                  className="sort-select"
+                  value={selectedSort}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setSelectedSort(e.target.value as SelectedSort)
+                  }
+                >
+                  <option value="programs-desc">
+                    Програми (від більшої к-сті)
+                  </option>
+                  <option value="programs-asc">
+                    Програми (від меншої к-сті)
+                  </option>
+                  <option value="name-asc">Назва (А-Я)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {loading ? (
+            <div className="search-hub__status">Завантаження бази даних…</div>
+          ) : error ? (
+            <div className="search-hub__error" role="alert">
+              {error}
+            </div>
+          ) : (
+            <>
+              <p className="search-results-info muted">
+                Знайдено територіальних одиниць:{" "}
+                <strong>{filteredAndSortedList.length}</strong>
+              </p>
+
+              {filteredAndSortedList.length === 0 ? (
+                <div className="search-hub__empty">
+                  Нічого не знайдено за вашим запитом. Спробуйте змінити
+                  ключові слова.
+                </div>
+              ) : (
+                <div className="search-hub__cards-new">
+                  {visibleResults.map((item) => (
+                    <article
+                      key={`${item.type}-${item.id}`}
+                      className="unit-card"
+                    >
+                      <div className="unit-card__header">
+                        <span
+                          className={`unit-card__badge unit-card__badge--${item.type.toLowerCase()}`}
+                        >
+                          {getUnitTypeLabel(item.type)}
+                        </span>
+                        {item.strategies.length > 0 ? (
+                          <span className="unit-card__status unit-card__status--has-program">
+                            Програм: {item.strategies.length}
+                          </span>
+                        ) : (
+                          <span className="unit-card__status unit-card__status--no-program">
+                            Немає програм
+                          </span>
+                        )}
+                      </div>
+
+                      <h2 className="unit-card__title">{item.name}</h2>
+
+                      {item.type !== "Region" && (
+                        <p className="unit-card__location muted">
+                          {item.type === "Community" &&
+                            item.districtName &&
+                            `${item.districtName}, `}
+                          {item.regionName}
+                        </p>
+                      )}
+
+                      <div className="unit-card__content">
+                        {item.strategies.length > 0 ? (
+                          <div className="unit-card__strategies">
+                            <p className="unit-card__strategies-label">
+                              Документи розвитку:
+                            </p>
+                            <ul className="unit-card__strategies-list">
+                              {item.strategies.map((s) => (
+                                <li
+                                  key={s.id}
+                                  className="unit-card__strategy-item"
+                                >
+                                  <div className="unit-card__strategy-row">
+                                    <Link
+                                      className="unit-card__strategy-link"
+                                      to={`/strategies/${s.id}`}
+                                    >
+                                      <span className="unit-card__strategy-icon">
+                                        📄
+                                      </span>
+                                      <span className="unit-card__strategy-title">
+                                        {s.title}
+                                      </span>
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      className={`strategy-compare-btn${selectedStrategyId === s.id ? " strategy-compare-btn--active" : ""}`}
+                                      onClick={() =>
+                                        setSelectedStrategyId(
+                                          selectedStrategyId === s.id
+                                            ? null
+                                            : s.id,
+                                        )
+                                      }
+                                      title="Деталі стратегії"
+                                      aria-label="Переглянути деталі стратегії"
+                                      aria-pressed={
+                                        selectedStrategyId === s.id
+                                      }
+                                    >
+                                      👁
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div className="unit-card__empty-state">
+                            <p className="muted small-text">
+                              Документи ще не завантажені для цієї одиниці.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="unit-card__footer">
+                        <Link
+                          className={`btn ${item.strategies.length > 0 ? "btn--tonal" : "btn--primary"} btn--sm unit-card__action-btn`}
+                          to={buildUploadLink({
+                            type: item.type,
+                            regionId: item.regionId ?? "",
+                            districtId: item.districtId ?? "",
+                            communityId: item.communityId ?? "",
+                          })}
+                        >
+                          {item.strategies.length > 0
+                            ? "➕ Додати ще одну програму"
+                            : "➕ Додати програму"}
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {filteredAndSortedList.length > visibleCount && (
+                <div className="search-hub__more-container">
+                  <button
+                    type="button"
+                    className="btn btn--tonal load-more-btn"
+                    onClick={() => setVisibleCount((prev) => prev + 30)}
+                  >
+                    Показати ще
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </Container>
+      </main>
+
+      {/* Comparison drawer */}
+      {selectedStrategyId && (
+        <>
+          <div
+            className="comparison-overlay"
+            onClick={closeDrawer}
+            aria-hidden="true"
+          />
+          <aside
+            className="comparison-drawer comparison-drawer--open"
+            aria-label="Деталі стратегії"
+          >
+            <div className="comparison-drawer__header">
+              <h2 className="comparison-drawer__title">Деталі стратегії</h2>
               <button
                 type="button"
-                className="search-clear-btn"
-                onClick={() => setSearchQuery("")}
-                aria-label="Очистити пошук"
+                className="comparison-drawer__close"
+                onClick={closeDrawer}
+                aria-label="Закрити панель"
               >
                 ✕
               </button>
-            )}
-          </div>
-
-          <div className="controls-row">
-            <div className="filter-group">
-              <span className="controls-label">Тип одиниці:</span>
-              <div className="segmented-control">
-                <button
-                  type="button"
-                  className={`segmented-btn ${selectedFilter === "all" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("all")}
-                >
-                  Всі
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-btn ${selectedFilter === "community" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("community")}
-                >
-                  Громади
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-btn ${selectedFilter === "district" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("district")}
-                >
-                  Райони
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-btn ${selectedFilter === "region" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("region")}
-                >
-                  Області
-                </button>
-              </div>
             </div>
 
-            <div className="sort-group">
-              <label className="controls-label" htmlFor="sort-select">
-                Сортування:
-              </label>
-              <select
-                id="sort-select"
-                className="sort-select"
-                value={selectedSort}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setSelectedSort(e.target.value as SelectedSort)
-                }
-              >
-                <option value="programs-desc">
-                  Програми (від більшої к-сті)
-                </option>
-                <option value="programs-asc">
-                  Програми (від меншої к-сті)
-                </option>
-                <option value="name-asc">Назва (А-Я)</option>
-              </select>
+            <div className="comparison-drawer__body">
+              {selectedLoading && !selectedCatalogEntry && (
+                <p className="muted">Завантаження стратегії…</p>
+              )}
+              {selectedError && !selectedCatalogEntry && (
+                <p className="comparison-drawer__error">{selectedError}</p>
+              )}
+
+              {selectedCatalogEntry && (
+                <>
+                  {selectedLoaded?.strategy && (
+                    <StrategyResultCard
+                      entry={selectedCatalogEntry}
+                      strategy={selectedLoaded.strategy as any}
+                      isSelected={true}
+                      onSelect={closeDrawer}
+                    />
+                  )}
+                  <StrategyDetailPanel
+                    catalogEntry={selectedCatalogEntry}
+                    loaded={selectedLoaded}
+                    loading={selectedLoading}
+                    error={selectedError}
+                  />
+                </>
+              )}
             </div>
-          </div>
-        </section>
-
-        {loading ? (
-          <div className="search-hub__status">Завантаження бази даних…</div>
-        ) : error ? (
-          <div className="search-hub__error" role="alert">
-            {error}
-          </div>
-        ) : (
-          <>
-            <p className="search-results-info muted">
-              Знайдено територіальних одиниць:{" "}
-              <strong>{filteredAndSortedList.length}</strong>
-            </p>
-
-            {filteredAndSortedList.length === 0 ? (
-              <div className="search-hub__empty">
-                Нічого не знайдено за вашим запитом. Спробуйте змінити ключові
-                слова.
-              </div>
-            ) : (
-              <div className="search-hub__cards-new">
-                {visibleResults.map((item) => (
-                  <article
-                    key={`${item.type}-${item.id}`}
-                    className="unit-card"
-                  >
-                    <div className="unit-card__header">
-                      <span
-                        className={`unit-card__badge unit-card__badge--${item.type.toLowerCase()}`}
-                      >
-                        {getUnitTypeLabel(item.type)}
-                      </span>
-                      {item.strategies.length > 0 ? (
-                        <span className="unit-card__status unit-card__status--has-program">
-                          Програм: {item.strategies.length}
-                        </span>
-                      ) : (
-                        <span className="unit-card__status unit-card__status--no-program">
-                          Немає програм
-                        </span>
-                      )}
-                    </div>
-
-                    <h2 className="unit-card__title">{item.name}</h2>
-
-                    {item.type !== "Region" && (
-                      <p className="unit-card__location muted">
-                        {item.type === "Community" &&
-                          item.districtName &&
-                          `${item.districtName}, `}
-                        {item.regionName}
-                      </p>
-                    )}
-
-                    <div className="unit-card__content">
-                      {item.strategies.length > 0 ? (
-                        <div className="unit-card__strategies">
-                          <p className="unit-card__strategies-label">
-                            Документи розвитку:
-                          </p>
-                          <ul className="unit-card__strategies-list">
-                            {item.strategies.map((s) => (
-                              <li
-                                key={s.id}
-                                className="unit-card__strategy-item"
-                              >
-                                <Link
-                                  className="unit-card__strategy-link"
-                                  to={`/strategies/${s.id}`}
-                                >
-                                  <span className="unit-card__strategy-icon">
-                                    📄
-                                  </span>
-                                  <span className="unit-card__strategy-title">
-                                    {s.title}
-                                  </span>
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="unit-card__empty-state">
-                          <p className="muted small-text">
-                            Документи ще не завантажені для цієї одиниці.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="unit-card__footer">
-                      <Link
-                        className={`btn ${item.strategies.length > 0 ? "btn--tonal" : "btn--primary"} btn--sm unit-card__action-btn`}
-                        to={buildUploadLink({
-                          type: item.type,
-                          regionId: item.regionId ?? "",
-                          districtId: item.districtId ?? "",
-                          communityId: item.communityId ?? "",
-                        })}
-                      >
-                        {item.strategies.length > 0
-                          ? "➕ Додати ще одну програму"
-                          : "➕ Додати програму"}
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-
-            {filteredAndSortedList.length > visibleCount && (
-              <div className="search-hub__more-container">
-                <button
-                  type="button"
-                  className="btn btn--tonal load-more-btn"
-                  onClick={() => setVisibleCount((prev) => prev + 30)}
-                >
-                  Показати ще
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </Container>
-    </main>
+          </aside>
+        </>
+      )}
+    </>
   );
 }
