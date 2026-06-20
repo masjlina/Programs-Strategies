@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Container } from "../../components/layout/Container";
 import { StrategyDetailPanel } from "../../components/search/StrategyDetailPanel";
-import { StrategyResultCard } from "../../components/search/StrategyResultCard";
 import {
   buildUploadLink,
   fetchReferenceData,
@@ -548,22 +547,12 @@ export function SearchPage() {
               )}
 
               {selectedCatalogEntry && (
-                <>
-                  {selectedLoaded?.strategy && (
-                    <StrategyResultCard
-                      entry={selectedCatalogEntry}
-                      strategy={selectedLoaded.strategy as any}
-                      isSelected={true}
-                      onSelect={closeDrawer}
-                    />
-                  )}
-                  <StrategyDetailPanel
-                    catalogEntry={selectedCatalogEntry}
-                    loaded={selectedLoaded}
-                    loading={selectedLoading}
-                    error={selectedError}
-                  />
-                </>
+                <StrategyDetailPanel
+                  catalogEntry={selectedCatalogEntry}
+                  loaded={selectedLoaded}
+                  loading={selectedLoading}
+                  error={selectedError}
+                />
               )}
             </div>
           </aside>

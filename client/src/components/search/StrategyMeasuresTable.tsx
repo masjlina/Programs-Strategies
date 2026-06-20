@@ -25,9 +25,6 @@ export function StrategyMeasuresTable({ rows }: StrategyMeasuresTableProps) {
           <thead>
             <tr>
               <th>Назва заходу</th>
-              <th>Виконавець</th>
-              <th>Термін</th>
-              <th>Бюджет</th>
               <th>Статус</th>
             </tr>
           </thead>
@@ -40,9 +37,6 @@ export function StrategyMeasuresTable({ rows }: StrategyMeasuresTableProps) {
                   </span>
                   <span className="measures-table__meta">{row.label}</span>
                 </td>
-                <td>{row.executor}</td>
-                <td>{row.deadline}</td>
-                <td>{row.budgetLabel}</td>
                 <td>
                   <span className={`status-pill status-pill--${row.status}`}>
                     {row.status ? STATUS_LABELS[row.status] : ""}

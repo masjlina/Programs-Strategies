@@ -64,7 +64,7 @@ export function StrategyDetailPanel({
         </div>
         <div className="strategy-detail__actions">
           {fileDisabled ? (
-            <span className="btn btn--outline btn--disabled">
+            <span className="btn btn--disabled">
               PDF (скоро)
             </span>
           ) : (
@@ -91,7 +91,7 @@ export function StrategyDetailPanel({
       </header>
 
       <StrategyDashboard metrics={metrics} />
-      <StrategyMeasuresTable rows={measureRows} />
+      {measureRows.length > 0 && <StrategyMeasuresTable rows={measureRows} />}
       <StrategyGoalsTree strategy={strategy as any} />
     </div>
   );
