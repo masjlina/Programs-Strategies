@@ -1,6 +1,6 @@
-using ApplicationCore.Dtos;
-using ApplicationCore.Services.IServices;
-using Infrastructure.Data;
+using Application.Dtos;
+using Application.Services.IServices;
+using Domain.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

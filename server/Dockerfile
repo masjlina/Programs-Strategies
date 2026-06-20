@@ -2,8 +2,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["WebAPI/WebAPI.csproj", "WebAPI/"]
-COPY ["ApplicationCore/ApplicationCore.csproj", "ApplicationCore/"]
-COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
+COPY ["Application/Application.csproj", "Application/"]
+COPY ["Domain/Domain.csproj", "Domain/"]
 COPY ["Shared/Shared.csproj", "Shared/"]
 
 RUN dotnet restore "WebAPI/WebAPI.csproj"

@@ -4,6 +4,8 @@
 !.env.*.example
 .env.compose
 
+data/*
+
 # --- IDE & editor ---
 .vscode/*
 !.vscode/extensions.json

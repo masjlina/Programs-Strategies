@@ -7,6 +7,11 @@
 .env
 WebAPI/appsettings.Development.json
 
+ParserTester/*
+data/*
+raw_lines_extracted.txt
+test_output.txt
+
 # User-specific files
 *.rsuser
 *.suo

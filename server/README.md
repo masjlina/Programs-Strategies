@@ -2,8 +2,8 @@
 ## Структура проєкта
 
 - `WebAPI` - основний проєкт, який запускає сервер
-- `ApplicationCore` - логіка роботи з даними
-- `Infrastructure` - сутності, підключення до бази даних і міграції
+- `Application` - логіка роботи з даними
+- `Domain` - сутності, підключення до бази даних і міграції
 - `Shared` - спільні типи та допоміжні класи
 
 ## Що потрібно, щоб запустити проєкт локально
@@ -42,7 +42,7 @@ dotnet restore
 ### 2. Налаштувати структуру бази даних
 
 ```bash
-dotnet ef database update --project Infrastructure --startup-project WebAPI
+dotnet ef database update --project Domain --startup-project WebAPI
 ```
 
 Якщо команда `dotnet ef` не працює, спочатку встановіть її:

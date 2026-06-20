@@ -1,9 +1,9 @@
-using ApplicationCore.Services;
-using ApplicationCore.Services.IServices;
-using ApplicationCore.Dtos;
-using ApplicationCore.Dtos.Mappers;
-using Infrastructure.Data;
-using Infrastructure.Entities;
+using Application.Services;
+using Application.Services.IServices;
+using Application.Dtos;
+using Application.Dtos.Mappers;
+using Domain.Data;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -44,12 +44,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     var webApiXml = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var applicationCoreXml = "ApplicationCore.xml";
+    var applicationXml = "Application.xml";
     var sharedXml = "Shared.xml";
     var basePath = AppContext.BaseDirectory;
 
     options.IncludeXmlComments(Path.Combine(basePath, webApiXml));
-    options.IncludeXmlComments(Path.Combine(basePath, applicationCoreXml));
+    options.IncludeXmlComments(Path.Combine(basePath, applicationXml));
     options.IncludeXmlComments(Path.Combine(basePath, sharedXml));
 });
 
