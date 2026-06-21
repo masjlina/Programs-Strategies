@@ -1,10 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Container } from "../../components/layout/Container";
+import { apiGet, apiPut, apiPatch, apiDelete } from "../../lib/api";
 import "./AdminPage.css";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:5257";
 
 type ActiveType = "Region" | "Community";
 type UrlFilter = "all" | "filled" | "empty";
@@ -76,14 +73,8 @@ export function AdminPage() {
     setError(null);
 
     Promise.all([
-      fetch(`${API_BASE_URL}/api/Regions`).then((r) => {
-        if (!r.ok) throw new Error("Не вдалося завантажити області");
-        return r.json();
-      }),
-      fetch(`${API_BASE_URL}/api/Communities`).then((r) => {
-        if (!r.ok) throw new Error("Не вдалося завантажити громади");
-        return r.json();
-      }),
+      apiGet<UnitItem[]>("/api/Regions"),
+      apiGet<UnitItem[]>("/api/Communities"),
     ])
       .then(([regionsData, communitiesData]) => {
         if (!cancelled) {
@@ -239,15 +230,7 @@ export function AdminPage() {
     if (!selectedUnit) return;
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/Strategies/${strategyId}`,
-        {
-          method: "DELETE",
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Не вдалося видалити програму");
-      }
+      await apiDelete(`/api/Strategies/${strategyId}`);
 
       setSelectedUnit((prev) =>
         prev
@@ -321,23 +304,10 @@ export function AdminPage() {
         strategyUrl: editStrategyUrl || null,
       };
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/Strategies/${strategyId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        },
+      const updatedStrategy = await apiPut<Strategy, typeof payload>(
+        `/api/Strategies/${strategyId}`,
+        payload
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || "Не вдалося оновити програму");
-      }
-
-      const updatedStrategy: Strategy = await response.json();
 
       setSelectedUnit((prev) =>
         prev
@@ -444,32 +414,17 @@ export function AdminPage() {
       return;
     }
 
-    setSaving(true);
-    const endpoint =
+    const path =
       activeType === "Region"
-        ? `${API_BASE_URL}/api/Regions/${selectedUnit.id}`
-        : `${API_BASE_URL}/api/Communities/${selectedUnit.id}`;
+        ? `/api/Regions/${selectedUnit.id}`
+        : `/api/Communities/${selectedUnit.id}`;
 
     try {
-      const response = await fetch(endpoint, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          strategiesUrl: strategiesUrlInput || null,
-          websiteUrl: websiteUrlInput || null,
-        }),
+      const responseData = await apiPatch<any, any>(path, {
+        strategiesUrl: strategiesUrlInput || null,
+        websiteUrl: websiteUrlInput || null,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || "Не вдалося зберегти дані на сервері.",
-        );
-      }
-
-      const responseData = await response.json();
       const updatedStrategiesUrl = responseData.strategiesUrl;
       const updatedWebsiteUrl = responseData.websiteUrl;
 

@@ -2,6 +2,7 @@ const DEFAULT_API_BASE_URL = "http://localhost:5257";
 
 interface ApiError {
   message?: string;
+  errors?: string[];
 }
 
 type UnitType = "Community" | "District" | "Region";
@@ -31,41 +32,141 @@ export function getApiBaseUrl(): string {
   return configured || DEFAULT_API_BASE_URL;
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`);
+// In-memory access token storage
+let accessToken: string | null = null;
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  // Handle 401 Unauthorized (unless it's sign-in or a refresh request itself)
+  if (response.status === 401 && path !== "/api/sign-in" && path !== "/api/refresh") {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      try {
+        const refreshResponse = await fetch(`${getApiBaseUrl()}/api/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (refreshResponse.ok) {
+          const data = (await refreshResponse.json()) as { accessToken: string };
+          accessToken = data.accessToken;
+          onRefreshed(data.accessToken);
+          isRefreshing = false;
+        } else {
+          isRefreshing = false;
+          accessToken = null;
+          throw new Error("Session expired");
+        }
+      } catch (err) {
+        isRefreshing = false;
+        accessToken = null;
+        throw err;
+      }
+    }
+
+    // Wait for the token refresh to complete and retry the request
+    return new Promise<T>((resolve, reject) => {
+      subscribeTokenRefresh(async (newToken) => {
+        try {
+          headers.set("Authorization", `Bearer ${newToken}`);
+          const retryResponse = await fetch(`${getApiBaseUrl()}${path}`, {
+            ...options,
+            headers,
+            credentials: "include",
+          });
+
+          if (!retryResponse.ok) {
+            const payload = (await retryResponse.json().catch(() => null)) as ApiError | null;
+            reject(new Error(payload?.message ?? payload?.errors?.[0] ?? `API request failed: ${retryResponse.status}`));
+          } else {
+            if (retryResponse.status === 204) {
+              resolve({} as T);
+            } else {
+              resolve(retryResponse.json() as Promise<T>);
+            }
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+  }
 
   if (!response.ok) {
-    const payload = (await response
-      .json()
-      .catch(() => null)) as ApiError | null;
+    const payload = (await response.json().catch(() => null)) as ApiError | null;
     throw new Error(
-      payload?.message ?? `API request failed: ${response.status}`,
+      payload?.message ?? payload?.errors?.[0] ?? `API request failed: ${response.status}`,
     );
+  }
+
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json() as Promise<T>;
 }
 
-export async function apiPost<TResponse, TBody>(
-  path: string,
-  body: TBody,
-): Promise<TResponse> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+export async function apiGet<T>(path: string): Promise<T> {
+  return apiRequest<T>(path, { method: "GET" });
+}
+
+export async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
 
-  if (!response.ok) {
-    const payload = (await response
-      .json()
-      .catch(() => null)) as ApiError | null;
-    throw new Error(
-      payload?.message ?? `API request failed: ${response.status}`,
-    );
-  }
+export async function apiPut<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
-  return response.json() as Promise<TResponse>;
+export async function apiPatch<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete<TResponse = void>(path: string): Promise<TResponse> {
+  return apiRequest<TResponse>(path, {
+    method: "DELETE",
+  });
 }
 
 export async function fetchReferenceData(): Promise<ReferenceData> {
@@ -90,8 +191,7 @@ export function buildUploadLink(item: UploadItem): string {
   });
 
   if (item.type === "District" || item.type === "Community") {
-    if (item.districtId !== undefined)
-      params.set("districtId", String(item.districtId));
+    if (item.districtId !== undefined) params.set("districtId", String(item.districtId));
   }
 
   if (item.type === "Community" && item.communityId !== undefined) {
@@ -105,19 +205,8 @@ export async function apiUploadDocument<TResponse>(file: File): Promise<TRespons
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${getApiBaseUrl()}/api/UploadFile/parse-document`, {
+  return apiRequest<TResponse>("/api/UploadFile/parse-document", {
     method: "POST",
     body: formData,
   });
-
-  if (!response.ok) {
-    const payload = (await response
-      .json()
-      .catch(() => null)) as ApiError | null;
-    throw new Error(
-      payload?.message ?? `API request failed: ${response.status}`,
-    );
-  }
-
-  return response.json() as Promise<TResponse>;
 }

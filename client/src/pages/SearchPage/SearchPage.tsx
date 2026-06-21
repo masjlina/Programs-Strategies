@@ -6,6 +6,7 @@ import {
   fetchReferenceData,
   getUnitTypeLabel,
 } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import "./SearchPage.css";
 
 type SelectedFilter = "all" | "community" | "district" | "region";
@@ -54,6 +55,7 @@ interface SearchItem {
 }
 
 export function SearchPage() {
+  const { user } = useAuth();
   const [regions, setRegions] = useState<RegionItem[]>([]);
   const [districts, setDistricts] = useState<DistrictItem[]>([]);
   const [communities, setCommunities] = useState<CommunityItem[]>([]);
@@ -392,21 +394,23 @@ export function SearchPage() {
                       )}
                     </div>
 
-                    <div className="unit-card__footer">
-                      <Link
-                        className={`btn ${item.strategies.length > 0 ? "btn--tonal" : "btn--primary"} btn--sm unit-card__action-btn`}
-                        to={buildUploadLink({
-                          type: item.type,
-                          regionId: item.regionId ?? "",
-                          districtId: item.districtId ?? "",
-                          communityId: item.communityId ?? "",
-                        })}
-                      >
-                        {item.strategies.length > 0
-                          ? "➕ Додати ще одну програму"
-                          : "➕ Додати програму"}
-                      </Link>
-                    </div>
+                    {user && (
+                      <div className="unit-card__footer">
+                        <Link
+                          className={`btn ${item.strategies.length > 0 ? "btn--tonal" : "btn--primary"} btn--sm unit-card__action-btn`}
+                          to={buildUploadLink({
+                            type: item.type,
+                            regionId: item.regionId ?? "",
+                            districtId: item.districtId ?? "",
+                            communityId: item.communityId ?? "",
+                          })}
+                        >
+                          {item.strategies.length > 0
+                            ? "➕ Додати ще одну програму"
+                            : "➕ Додати програму"}
+                        </Link>
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
