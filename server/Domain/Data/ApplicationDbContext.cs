@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -183,6 +187,40 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasColumnType("text");
         });
+    }
+
+    public override int SaveChanges()
+    {
+        UpdateTimestamps();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        UpdateTimestamps();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void UpdateTimestamps()
+    {
+        var entries = ChangeTracker
+            .Entries()
+            .Where(e => e.Entity is Strategy && (e.State == EntityState.Added || e.State == EntityState.Modified));
+
+        foreach (var entityEntry in entries)
+        {
+            var entity = (Strategy)entityEntry.Entity;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            if (entityEntry.State == EntityState.Added)
+            {
+                entity.CreatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                Entry(entity).Property(x => x.CreatedAt).IsModified = false;
+            }
+        }
     }
 
     private static void ConfigureBaseEntity<T>(EntityTypeBuilder<T> e)
