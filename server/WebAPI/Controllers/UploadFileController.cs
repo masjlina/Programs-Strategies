@@ -1,5 +1,6 @@
 using Application.Dtos;
 using Application.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
@@ -7,6 +8,7 @@ namespace WebAPI.Controllers;
 /// <summary>
 /// Handles file upload, parsing, and persistence.
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class UploadFileController : ControllerBase

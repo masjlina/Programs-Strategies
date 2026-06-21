@@ -130,9 +130,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("ProgramsStrategies");
 app.UseHttpsRedirection();
-app.MapControllers();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {

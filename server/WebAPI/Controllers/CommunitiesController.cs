@@ -1,6 +1,7 @@
 using Application.Dtos;
 using Application.Services.IServices;
 using Domain.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,12 +26,14 @@ public class CommunitiesController : ControllerBase
         return Ok(await _service.GetAllAsync());
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<CommunityDto>> Create([FromBody] CommunityDto dto)
     {
         return Ok(await _service.CreateAsync(dto));
     }
 
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<CommunityDto>> Update(Guid id, [FromBody] CommunityDto dto)
     {
@@ -38,6 +41,7 @@ public class CommunitiesController : ControllerBase
         return Ok(await _service.UpdateAsync(dto));
     }
 
+    [Authorize]
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> UpdateStrategiesUrl(Guid id, [FromBody] UpdateStrategiesUrlDto dto)
     {
@@ -81,6 +85,7 @@ public class CommunitiesController : ControllerBase
         });
     }
 
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

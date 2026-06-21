@@ -1,5 +1,6 @@
 using Application.Dtos;
 using Application.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
@@ -34,6 +35,7 @@ public class ProgramTasksController : ControllerBase
     /// </summary>
     /// <param name="dto">Program task payload.</param>
     /// <response code="200">Program task created successfully.</response>
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<ProgramTaskDto>> Create([FromBody] ProgramTaskDto dto)
     {
@@ -47,6 +49,7 @@ public class ProgramTasksController : ControllerBase
     /// <param name="id">Program task identifier.</param>
     /// <param name="dto">Program task payload.</param>
     /// <response code="200">Program task updated successfully.</response>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ProgramTaskDto>> Update(Guid id, [FromBody] ProgramTaskDto dto)
     {
@@ -60,6 +63,7 @@ public class ProgramTasksController : ControllerBase
     /// </summary>
     /// <param name="id">Program task identifier.</param>
     /// <response code="204">Program task deleted successfully.</response>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

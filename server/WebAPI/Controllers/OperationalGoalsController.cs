@@ -1,5 +1,6 @@
 using Application.Dtos;
 using Application.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
@@ -34,6 +35,7 @@ public class OperationalGoalsController : ControllerBase
     /// </summary>
     /// <param name="dto">Operational goal payload.</param>
     /// <response code="200">Operational goal created successfully.</response>
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<OperationalGoalDto>> Create([FromBody] OperationalGoalDto dto)
     {
@@ -47,6 +49,7 @@ public class OperationalGoalsController : ControllerBase
     /// <param name="id">Operational goal identifier.</param>
     /// <param name="dto">Operational goal payload.</param>
     /// <response code="200">Operational goal updated successfully.</response>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<OperationalGoalDto>> Update(Guid id, [FromBody] OperationalGoalDto dto)
     {
@@ -60,6 +63,7 @@ public class OperationalGoalsController : ControllerBase
     /// </summary>
     /// <param name="id">Operational goal identifier.</param>
     /// <response code="204">Operational goal deleted successfully.</response>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

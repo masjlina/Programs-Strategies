@@ -1,5 +1,6 @@
 using Application.Dtos;
 using Application.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
@@ -21,12 +22,14 @@ public class SettlementsController : ControllerBase
         return Ok(await _service.GetAllAsync());
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<SettlementDto>> Create([FromBody] SettlementDto dto)
     {
         return Ok(await _service.CreateAsync(dto));
     }
 
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<SettlementDto>> Update(Guid id, [FromBody] SettlementDto dto)
     {
@@ -34,6 +37,7 @@ public class SettlementsController : ControllerBase
         return Ok(await _service.UpdateAsync(dto));
     }
 
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

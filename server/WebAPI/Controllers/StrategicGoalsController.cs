@@ -1,5 +1,6 @@
 using Application.Dtos;
 using Application.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers;
@@ -34,6 +35,7 @@ public class StrategicGoalsController : ControllerBase
     /// </summary>
     /// <param name="dto">Strategic goal payload.</param>
     /// <response code="200">Strategic goal created successfully.</response>
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<StrategicGoalDto>> Create([FromBody] StrategicGoalDto dto)
     {
@@ -47,6 +49,7 @@ public class StrategicGoalsController : ControllerBase
     /// <param name="id">Strategic goal identifier.</param>
     /// <param name="dto">Strategic goal payload.</param>
     /// <response code="200">Strategic goal updated successfully.</response>
+    [Authorize]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<StrategicGoalDto>> Update(Guid id, [FromBody] StrategicGoalDto dto)
     {
@@ -60,6 +63,7 @@ public class StrategicGoalsController : ControllerBase
     /// </summary>
     /// <param name="id">Strategic goal identifier.</param>
     /// <response code="204">Strategic goal deleted successfully.</response>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
