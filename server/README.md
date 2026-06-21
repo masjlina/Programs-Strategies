@@ -82,12 +82,11 @@ dotnet run --project WebAPI
 
 ## Доступ до API та Swagger
 
-Після успішного запуску сервер буде доступний за адресами:
+Після успішного запуску сервер буде доступний за адресою:
 - `http://localhost:5257`
-- `https://localhost:7054`
 
 Swagger UI для тестування API знаходиться за адресою:
-- **`https://localhost:7054/swagger`** (або `/swagger/index.html`)
+- **`http://localhost:5257/swagger`** (або `/swagger/index.html`)
 
 ---
 
