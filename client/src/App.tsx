@@ -1,9 +1,10 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "./layouts/MainLayout";
 import { HomePage } from "./pages/HomePage/HomePage";
 import { SearchPage } from "./pages/SearchPage/SearchPage";
 import { StrategyPage } from "./pages/StrategyPage/StrategyPage";
-import NotFoundPage from "./pages/NotFoundPage/NotFoundPage";
+import { UploadPage } from "./pages/UploadPage/UploadPage";
+import { AdminPage } from "./pages/AdminPage/AdminPage";
 import "./App.css";
 
 export default function App() {
@@ -11,10 +12,12 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route index element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/strategies/:id" element={<StrategyPage />} />
-          <Route path="*" element={<NotFoundPage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

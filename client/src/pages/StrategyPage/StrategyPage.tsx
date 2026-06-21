@@ -5,107 +5,49 @@ import { Container } from "../../components/layout/Container";
 import {
   getCatalogEntryById,
   loadStrategyForCatalogEntry,
+  type CatalogEntry,
+  type StrategyResponse,
 } from "../../lib/strategies";
 import "./StrategyPage.css";
-
-interface CatalogEntry {
-  id: string;
-  city: string;
-  unitId: string;
-  strategyId: string;
-  title: string;
-  period: string;
-  summary: string;
-  directions: string[];
-  status: "active" | "archive";
-  strategyUrl: string | null;
-  officialSourceUrl: string | null;
-  fileUrl: string | null;
-}
-
-interface Unit {
-  id: string;
-  name: string;
-  type: "Region" | "District" | "Community";
-  regionId?: string;
-  districtId?: string;
-  communityId?: string;
-}
-
-interface StrategyTask {
-  id?: string;
-  label?: string;
-  number?: string | number;
-  description?: string;
-}
-
-interface OperationalGoal {
-  id?: string;
-  label?: string;
-  number?: string | number;
-  title?: string;
-  programTasks?: StrategyTask[];
-}
-
-interface StrategicGoal {
-  id?: string;
-  label?: string;
-  number?: string | number;
-  title?: string;
-  operationalGoals?: OperationalGoal[];
-}
-
-interface Strategy {
-  id: string;
-  title: string;
-  strategyUrl?: string | null;
-  regionId?: string | null;
-  districtId?: string | null;
-  communityId?: string | null;
-  strategicGoals: StrategicGoal[];
-}
-
-interface LoadedData {
-  strategy: Strategy;
-  unit: Unit | undefined;
-}
 
 export function StrategyPage() {
   const { id } = useParams<{ id: string }>();
 
   const [catalogEntry, setCatalogEntry] = useState<CatalogEntry | null>(null);
-  const [loaded, setLoaded] = useState<LoadedData | null>(null);
+  const [loaded, setLoaded] = useState<StrategyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const notFound = !id;
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setNotFound(false);
     setCatalogEntry(null);
     setLoaded(null);
 
     getCatalogEntryById(id)
-      .then((entry: CatalogEntry | null) => {
+      .then((entry) => {
         if (!entry) {
-          if (!cancelled) setError("Стратегію не знайдено");
+          if (!cancelled) setNotFound(true);
           return null;
         }
-
         if (!cancelled) setCatalogEntry(entry);
         return loadStrategyForCatalogEntry(entry);
       })
       .then((data) => {
-        if (!cancelled && data) setLoaded(data as LoadedData);
+        if (!cancelled && data) setLoaded(data);
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unknown error");
-        }
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Невідома помилка");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -118,23 +60,25 @@ export function StrategyPage() {
 
   if (notFound) {
     return (
-      <Container>
-        <div className="strategy-page">
+      <main className="strategy-page strategy-page--centered">
+        <Container>
           <h1>Стратегію не знайдено</h1>
-          <p>Перевірте посилання або поверніться до пошуку.</p>
-          <Link to="/search">До пошуку</Link>
-        </div>
-      </Container>
+          <p className="muted">Перевірте посилання або поверніться до пошуку.</p>
+          <Link className="btn btn--tonal" to="/search">
+            До пошуку
+          </Link>
+        </Container>
+      </main>
     );
   }
 
   if (!catalogEntry) {
     return (
-      <Container>
-        <div className="strategy-page">
-          <p>Завантаження стратегії…</p>
-        </div>
-      </Container>
+      <main className="strategy-page strategy-page--centered">
+        <Container>
+          <p className="muted">Завантаження стратегії…</p>
+        </Container>
+      </main>
     );
   }
 
@@ -148,37 +92,65 @@ export function StrategyPage() {
   const unitName = loaded?.unit?.name;
 
   return (
-    <Container>
-      <div className="strategy-page">
-        <Link to="/search">← Назад до пошуку</Link>
+    <main className="strategy-page">
+      <Container>
+        <Link className="strategy-page__back" to="/search">
+          ← Назад до пошуку
+        </Link>
 
-        <h1>{catalogEntry.title}</h1>
-        {unitName && <p>{unitName}</p>}
-
-        <section>
-          <h2>Документи</h2>
-
-          {fileDisabled ? (
-            <span>Завантажити PDF (скоро)</span>
-          ) : (
-            <a href={fileLink ?? "#"} target="_blank" rel="noreferrer">
-              Завантажити PDF
-            </a>
+        <header className="strategy-page__header">
+          <p className="strategy-page__city">{catalogEntry.city}</p>
+          {unitName && (
+            <p className="strategy-page__unit muted">{unitName}</p>
           )}
-
-          {sourceDisabled ? (
-            <span>Офіційне джерело (скоро)</span>
-          ) : (
-            <a href={sourceLink ?? "#"} target="_blank" rel="noreferrer">
-              Офіційне джерело
-            </a>
+          <h1 className="strategy-page__title">
+            {strategy?.title ?? catalogEntry.title}
+          </h1>
+          {catalogEntry.period && (
+            <p className="strategy-page__period muted">
+              Період: {catalogEntry.period}
+            </p>
           )}
-        </section>
+        </header>
 
-        {loading && <p>Завантаження стратегії…</p>}
-        {error && <p>{error}</p>}
+        <div className="strategy-page__docs">
+          <h2 className="strategy-page__docs-title">Документи</h2>
+          <div className="strategy-page__docs-actions">
+            {fileDisabled ? (
+              <span className="btn btn--disabled" title="Файл ще не додано">
+                Завантажити PDF (скоро)
+              </span>
+            ) : (
+              <a
+                className="btn btn--primary"
+                href={fileLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Завантажити PDF
+              </a>
+            )}
+            {sourceDisabled ? (
+              <span className="btn btn--disabled" title="Посилання ще не додано">
+                Офіційне джерело (скоро)
+              </span>
+            ) : (
+              <a
+                className="btn btn--tonal"
+                href={sourceLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Офіційне джерело
+              </a>
+            )}
+          </div>
+        </div>
+
+        {loading && <p className="muted">Завантаження стратегії…</p>}
+        {error && <p className="strategy-page__error">{error}</p>}
         {strategy && <StrategyGoalsTree strategy={strategy as any} />}
-      </div>
-    </Container>
+      </Container>
+    </main>
   );
 }
