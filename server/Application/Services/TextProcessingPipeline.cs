@@ -37,24 +37,45 @@ public class TextProcessingPipeline
     }
 
     /// <summary>
-    /// Processes all program task descriptions of a strategy, sanitizing, stemming, and calculating word frequencies.
+    /// Processes all strategy elements (strategic goals, operational goals, and tasks), sanitizing, stemming, and calculating word frequencies.
     /// </summary>
     public async Task<Dictionary<string, int>> ProcessStrategyTextAsync(Guid strategyId)
     {
         // 1. Extraction & Aggregation
-        var tasks = await _dbContext.ProgramTasks
-            .Where(t => t.OperationalGoal!.StrategicGoal!.StrategyId == strategyId)
+        var strategicGoals = await _dbContext.StrategicGoals
+            .Include(sg => sg.OperationalGoals)
+                .ThenInclude(og => og.ProgramTasks)
+            .Where(sg => sg.StrategyId == strategyId)
             .ToListAsync();
 
-        if (tasks.Count == 0)
+        if (strategicGoals.Count == 0)
         {
             return new Dictionary<string, int>();
         }
 
         var sb = new StringBuilder();
-        foreach (var task in tasks)
+        foreach (var sg in strategicGoals)
         {
-            sb.AppendLine(task.Description);
+            if (!string.IsNullOrWhiteSpace(sg.Title))
+            {
+                sb.AppendLine(sg.Title);
+            }
+
+            foreach (var og in sg.OperationalGoals)
+            {
+                if (!string.IsNullOrWhiteSpace(og.Title))
+                {
+                    sb.AppendLine(og.Title);
+                }
+
+                foreach (var task in og.ProgramTasks)
+                {
+                    if (!string.IsNullOrWhiteSpace(task.Description))
+                    {
+                        sb.AppendLine(task.Description);
+                    }
+                }
+            }
         }
         string combinedText = sb.ToString();
 
