@@ -37,6 +37,13 @@ builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
 builder.Services.AddScoped<IOfficialDataImportService, OfficialDataImportService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHttpClient<ILemmatizer, UkrainianLemmatizer>(client =>
+{
+    var url = builder.Configuration["Services:NlpServiceUrl"] ?? "http://localhost:8082";
+    client.BaseAddress = new Uri(url);
+});
+builder.Services.AddScoped<TextProcessingPipeline>();
+builder.Services.AddScoped<IStrategyImportService, StrategyImportService>();
 builder.Services.AddScoped<IMapper<Region, RegionDto>, RegionMapper>();
 builder.Services.AddScoped<IMapper<District, DistrictDto>, DistrictMapper>();
 builder.Services.AddScoped<IMapper<Community, CommunityDto>, CommunityMapper>();

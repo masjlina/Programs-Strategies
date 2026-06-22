@@ -24,13 +24,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      nlp:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__ConnStr: Host=db;Port=5432;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD};Database=${POSTGRES_DB:-ProgramsStrategies}
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN}
+      Services__NlpServiceUrl: http://nlp:8000
     ports:
       - "8081:5000"
+
+  nlp:
+    build:
+      context: ./nlp-service
+      dockerfile: Dockerfile
+    container_name: programs-strategies-nlp
+    restart: unless-stopped
+    ports:
+      - "8082:8000"
 
   client:
     build:

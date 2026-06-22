@@ -12,10 +12,17 @@ namespace Application.Services;
 public class ParseService : IParseService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly TextProcessingPipeline _textPipeline;
+    private readonly IStrategyImportService _importService;
 
-    public ParseService(ApplicationDbContext dbContext)
+    public ParseService(
+        ApplicationDbContext dbContext,
+        TextProcessingPipeline textPipeline,
+        IStrategyImportService importService)
     {
         _dbContext = dbContext;
+        _textPipeline = textPipeline;
+        _importService = importService;
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -127,5 +134,11 @@ public class ParseService : IParseService
         await _dbContext.Communities.AddAsync(entity);
 
         await _dbContext.SaveChangesAsync();
+
+        foreach (var strategy in entity.Strategies)
+        {
+            var wordCounts = await _textPipeline.ProcessStrategyTextAsync(strategy.Id);
+            await _importService.SaveStrategyMetricsAsync(strategy.Id, wordCounts);
+        }
     }
 }
