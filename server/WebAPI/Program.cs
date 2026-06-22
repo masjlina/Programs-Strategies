@@ -36,6 +36,7 @@ builder.Services.AddScoped<IOperationalGoalService, OperationalGoalService>();
 builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
 builder.Services.AddScoped<IOfficialDataImportService, OfficialDataImportService>();
+builder.Services.AddScoped<ISystemStatsService, SystemStatsService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IMapper<Region, RegionDto>, RegionMapper>();
 builder.Services.AddScoped<IMapper<District, DistrictDto>, DistrictMapper>();
@@ -111,7 +112,30 @@ builder.Services.Configure<ApiSettings>(option =>
 });
 
 var apiSettings = apiSettingsSection.Get<ApiSettings>();
-var signingKey = Convert.FromBase64String(apiSettingsSection["SigningKeys:0:Value"]);
+var signingKeyValue = apiSettingsSection["SigningKeys:0:Value"];
+if (string.IsNullOrWhiteSpace(signingKeyValue))
+{
+    throw new InvalidOperationException(
+        "Missing JWT signing key. Copy WebAPI/appsettings.Development.example.json to WebAPI/appsettings.Development.json and set Authentication:Schemes:Bearer:SigningKeys:0:Value to a Base64-encoded key (at least 256 bits).");
+}
+
+byte[] signingKey;
+try
+{
+    signingKey = Convert.FromBase64String(signingKeyValue);
+}
+catch (FormatException ex)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must be a valid Base64 string. Update Authentication:Schemes:Bearer:SigningKeys:0:Value in appsettings.Development.json.",
+        ex);
+}
+
+if (signingKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must be at least 256 bits (32 bytes) after Base64 decoding.");
+}
 
 builder.Services.AddAuthentication(opt =>
 {
