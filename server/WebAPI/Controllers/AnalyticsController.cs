@@ -54,6 +54,7 @@ public class AnalyticsController : ControllerBase
             WITH strategy_counts AS (
                 SELECT 
                     s.""Id"" AS strategy_id,
+                    s.""Title"" AS strategy_title,
                     COALESCE(r.""NameFull"", d.""NameFull"", c.""NameFull"", '') AS target_name,
                     CASE 
                         WHEN s.""RegionId"" IS NOT NULL THEN 'Region'
@@ -77,6 +78,7 @@ public class AnalyticsController : ControllerBase
             )
             SELECT 
                 sc.strategy_id,
+                sc.strategy_title,
                 sc.target_name,
                 sc.level,
                 sc.count,
@@ -100,12 +102,13 @@ public class AnalyticsController : ControllerBase
                 results.Add(new KeywordQueryResult
                 {
                     StrategyId = reader.GetGuid(0),
-                    TargetName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                    Level = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                    Count = reader.GetInt32(3),
-                    Deviation = reader.GetDouble(4),
-                    GlobalMean = reader.GetDouble(5),
-                    Variance = reader.GetDouble(6)
+                    StrategyTitle = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    TargetName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    Level = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                    Count = reader.GetInt32(4),
+                    Deviation = reader.GetDouble(5),
+                    GlobalMean = reader.GetDouble(6),
+                    Variance = reader.GetDouble(7)
                 });
             }
         }
@@ -134,6 +137,7 @@ public class AnalyticsController : ControllerBase
                 items.Add(new KeywordIntensityItemDto
                 {
                     StrategyId = res.StrategyId,
+                    StrategyTitle = res.StrategyTitle,
                     TargetName = targetName,
                     Level = res.Level,
                     Count = res.Count,
@@ -159,6 +163,7 @@ public class AnalyticsController : ControllerBase
     private class KeywordQueryResult
     {
         public Guid StrategyId { get; set; }
+        public required string StrategyTitle { get; set; }
         public required string TargetName { get; set; }
         public required string Level { get; set; }
         public int Count { get; set; }

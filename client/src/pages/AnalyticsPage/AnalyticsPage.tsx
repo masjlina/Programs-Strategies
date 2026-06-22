@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, AlertTriangle, TrendingUp, Layers } from 'lucide-react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine, Bar } from 'recharts';
 import { apiGet } from '../../lib/api';
@@ -7,6 +8,7 @@ import './AnalyticsPage.css';
 
 interface KeywordIntensityItemDto {
   strategyId: string;
+  strategyTitle: string;
   targetName: string;
   level: string;
   count: number;
@@ -234,7 +236,12 @@ export function AnalyticsPage() {
           </div>
         )}
 
-        {!isLoading && analyticsData && (
+        {!isLoading && analyticsData && (() => {
+          const displayItems = analyticsData.items
+            .filter((item) => item.count > 0)
+            .slice(0, 5);
+
+          return (
           <>
             {/* Chart Container */}
             <div className="analytics-dashboard-card">
@@ -257,7 +264,7 @@ export function AnalyticsPage() {
               <div style={{ width: '100%', height: 340 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={analyticsData.items}
+                    data={displayItems}
                     margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
@@ -305,15 +312,21 @@ export function AnalyticsPage() {
                   <thead>
                     <tr>
                       <th>Громада / Регіон</th>
+                      <th>Назва програми</th>
                       <th>Рівень</th>
                       <th>Кількість згадок</th>
                       <th>Відхилення від середнього</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {analyticsData.items.map((item) => (
+                    {displayItems.map((item) => (
                       <tr key={item.strategyId}>
                         <td className="cell-strategy-name">{item.targetName}</td>
+                        <td>
+                          <Link className="link" to={`/strategies/${item.strategyId}`}>
+                            {item.strategyTitle}
+                          </Link>
+                        </td>
                         <td>
                           <span className={`cell-strategy-level cell-strategy-level--${item.level.toLowerCase()}`}>
                             {getLevelLabel(item.level)}
@@ -332,7 +345,8 @@ export function AnalyticsPage() {
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
       </Container>
     </main>
   );
