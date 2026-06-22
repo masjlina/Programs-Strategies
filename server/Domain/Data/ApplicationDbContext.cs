@@ -193,7 +193,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<KeywordMetric>(e =>
         {
             ConfigureBaseEntity(e);
-            e.ToTable("keyword_metrics");
+            e.ToTable("KeywordMetrics");
 
             e.Property(x => x.StrategyId)
                 .HasColumnName("strategy_id")

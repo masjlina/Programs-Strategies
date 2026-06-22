@@ -66,7 +66,7 @@ public class AnalyticsController : ControllerBase
                 LEFT JOIN ""Regions"" r ON s.""RegionId"" = r.""Id""
                 LEFT JOIN ""Districts"" d ON s.""DistrictId"" = d.""Id""
                 LEFT JOIN ""Communities"" c ON s.""CommunityId"" = c.""Id""
-                LEFT JOIN keyword_metrics km 
+                LEFT JOIN ""KeywordMetrics"" km 
                     ON s.""Id"" = km.strategy_id AND km.keyword = @Keyword
             ),
             stats AS (

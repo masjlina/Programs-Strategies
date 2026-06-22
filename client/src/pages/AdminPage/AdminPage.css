@@ -395,8 +395,15 @@
 }
 
 @keyframes floatIllustration {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* Floating Toasts */
@@ -417,15 +424,12 @@
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  border-radius: 10px;
-  background: #ffffff;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--text-h);
-  border-left: 5px solid transparent;
   animation: slideInToast 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -442,7 +446,22 @@
 }
 
 .toast-icon {
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-icon__svg--success {
+  color: #10b981;
+}
+
+.toast-icon__svg--error {
+  color: #ef4444;
+}
+
+.toast-icon__svg--info {
+  color: #3b82f6;
 }
 
 .toast-message {
@@ -454,6 +473,7 @@
     opacity: 0;
     transform: translateY(12px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -519,6 +539,40 @@
   text-decoration: underline;
 }
 
+.program-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.analysis-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.analysis-status-tag--done {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.analysis-status-tag--none {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.analysis-status-icon {
+  flex-shrink: 0;
+}
+
 .program-card__actions {
   display: flex;
   gap: 8px;
@@ -550,7 +604,8 @@
   color: #991b1b;
 }
 
-.admin-page__status, .admin-page__error-banner {
+.admin-page__status,
+.admin-page__error-banner {
   text-align: center;
   padding: 40px;
   font-size: 1.1rem;

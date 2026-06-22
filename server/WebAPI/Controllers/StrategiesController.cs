@@ -82,4 +82,17 @@ public class StrategiesController : ControllerBase
         await _strategyService.RemoveAsync(id);
         return NoContent();
     }
+
+    /// <summary>
+    /// Executes the linguistic analysis for the given strategy.
+    /// </summary>
+    /// <param name="id">Strategy identifier.</param>
+    /// <response code="200">Analysis completed successfully and updated strategy returned.</response>
+    [Authorize]
+    [HttpPost("{id:guid}/analyze")]
+    public async Task<ActionResult<StrategyDto>> Analyze(Guid id)
+    {
+        var result = await _strategyService.AnalyzeAsync(id);
+        return Ok(result);
+    }
 }

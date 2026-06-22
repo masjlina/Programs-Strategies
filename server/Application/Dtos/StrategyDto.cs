@@ -17,4 +17,6 @@ public class StrategyDto : BaseDto
     /// Strategic goals included in this strategy.
     /// </summary>
     public List<StrategicGoalDto> StrategicGoals { get; set; } = new();
+
+    public bool HasLinguisticAnalysis { get; set; }
 }

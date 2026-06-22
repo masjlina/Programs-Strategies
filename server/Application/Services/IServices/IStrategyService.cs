@@ -9,4 +9,5 @@ public interface IStrategyService
     Task<StrategyDto> CreateAsync(StrategyDto dto);
     Task<StrategyDto> UpdateAsync(StrategyDto dto);
     Task RemoveAsync(Guid id);
+    Task<StrategyDto> AnalyzeAsync(Guid id);
 }

@@ -5,6 +5,7 @@ import { SearchPage } from "./pages/SearchPage/SearchPage";
 import { StrategyPage } from "./pages/StrategyPage/StrategyPage";
 import { UploadPage } from "./pages/UploadPage/UploadPage";
 import { AdminPage } from "./pages/AdminPage/AdminPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage/AnalyticsPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import "./App.css";
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<MainLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/strategies/:id" element={<StrategyPage />} />
             <Route
               path="/upload"

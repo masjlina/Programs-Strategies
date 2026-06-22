@@ -7,7 +7,7 @@ import './UploadPage.css'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface ProgramTask {
+export interface ProgramTask {
   id: string
   label: string
   number: number
@@ -15,7 +15,7 @@ interface ProgramTask {
   title?: string
 }
 
-interface OperationalGoal {
+export interface OperationalGoal {
   id: string
   label: string
   number: number
@@ -24,7 +24,7 @@ interface OperationalGoal {
   description?: string
 }
 
-interface StrategicGoal {
+export interface StrategicGoal {
   id: string
   label: string
   number: number
@@ -33,7 +33,7 @@ interface StrategicGoal {
   description?: string
 }
 
-interface ParsedStrategy {
+export interface ParsedStrategy {
   title: string
   strategyUrl: string | null
   strategicGoals: StrategicGoal[]
@@ -71,10 +71,10 @@ interface UnitListItem {
 
 type UnitType = 'Region' | 'District' | 'Community'
 type SaveStatus = 'idle' | 'success' | 'error'
-type MoveDirection = 'up' | 'down'
-type InsertType = 'strategic' | 'operational' | 'task'
+export type MoveDirection = 'up' | 'down'
+export type InsertType = 'strategic' | 'operational' | 'task'
 
-interface EditFields {
+export interface EditFields {
   label: string
   title: string
   description: string
@@ -1415,7 +1415,7 @@ export function UploadPage() {
 
 // ── Interactive Goals Tree Editor ────────────────────────────────────────────
 
-function EditableGoalsTree({
+export function EditableGoalsTree({
   strategy,
 
   onDelete,

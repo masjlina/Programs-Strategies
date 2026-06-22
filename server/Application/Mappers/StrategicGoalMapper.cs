@@ -1,3 +1,4 @@
+using System.Linq;
 using Domain.Entities;
 
 namespace Application.Dtos.Mappers;
@@ -20,7 +21,7 @@ public class StrategicGoalMapper : IMapper<StrategicGoal, StrategicGoalDto>
             Label = entity.Label,
             Number = entity.Number,
             Title = entity.Title,
-            OperationalGoals = entity.OperationalGoals.Select(_operationalGoalMapper.ToDto).ToList()
+            OperationalGoals = entity.OperationalGoals.OrderBy(x => x.Number).Select(_operationalGoalMapper.ToDto).ToList()
         };
     }
 

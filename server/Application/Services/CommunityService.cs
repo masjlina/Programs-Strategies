@@ -20,6 +20,7 @@ public class CommunityService : CrudService<Community, CommunityDto>, ICrudServi
     {
         var entities = await _dbContext.Communities
             .Include(x => x.Strategies)
+                .ThenInclude(x => x.KeywordMetrics)
             .ToListAsync();
         return entities.Select(_mapper.ToDto).ToList();
     }

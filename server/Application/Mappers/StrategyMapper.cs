@@ -1,3 +1,4 @@
+using System.Linq;
 using Domain.Entities;
 
 namespace Application.Dtos.Mappers;
@@ -21,7 +22,8 @@ public class StrategyMapper : IMapper<Strategy, StrategyDto>
             CommunityId = entity.CommunityId,
             Title = entity.Title,
             StrategyUrl = entity.StrategyUrl,
-            StrategicGoals = entity.StrategicGoals.Select(_strategicGoalMapper.ToDto).ToList()
+            StrategicGoals = entity.StrategicGoals.OrderBy(x => x.Number).Select(_strategicGoalMapper.ToDto).ToList(),
+            HasLinguisticAnalysis = entity.KeywordMetrics != null && entity.KeywordMetrics.Count > 0
         };
     }
 

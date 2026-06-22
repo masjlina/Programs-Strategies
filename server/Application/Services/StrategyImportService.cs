@@ -32,7 +32,7 @@ public class StrategyImportService : IStrategyImportService
         {
             // 2. Clear old keyword metrics for the target strategy
             await _dbContext.Database.ExecuteSqlRawAsync(
-                "DELETE FROM keyword_metrics WHERE strategy_id = {0}", strategyId);
+                "DELETE FROM \"KeywordMetrics\" WHERE strategy_id = {0}", strategyId);
 
             // 3. Obtain the raw connection
             var dbConnection = _dbContext.Database.GetDbConnection();
@@ -60,7 +60,7 @@ public class StrategyImportService : IStrategyImportService
 
             // 4. Perform optimized bulk binary COPY import
             using (var writer = await npgsqlConnection.BeginBinaryImportAsync(
-                "COPY keyword_metrics (\"Id\", strategy_id, keyword, count) FROM STDIN (FORMAT BINARY)"))
+                "COPY \"KeywordMetrics\" (\"Id\", strategy_id, keyword, count) FROM STDIN (FORMAT BINARY)"))
             {
                 foreach (var kvp in wordCounts)
                 {
