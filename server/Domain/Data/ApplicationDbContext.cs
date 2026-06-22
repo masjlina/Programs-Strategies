@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<StrategicGoal> StrategicGoals { get; set; }
     public DbSet<OperationalGoal> OperationalGoals { get; set; }
     public DbSet<ProgramTask> ProgramTasks { get; set; }
+    public DbSet<KeywordMetric> KeywordMetrics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -186,6 +187,36 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.Description)
                 .IsRequired()
                 .HasColumnType("text");
+        });
+
+        // Keyword Metric
+        modelBuilder.Entity<KeywordMetric>(e =>
+        {
+            ConfigureBaseEntity(e);
+            e.ToTable("keyword_metrics");
+
+            e.Property(x => x.StrategyId)
+                .HasColumnName("strategy_id")
+                .IsRequired();
+            e.Property(x => x.Keyword)
+                .HasColumnName("keyword")
+                .IsRequired()
+                .HasMaxLength(255);
+            e.Property(x => x.Count)
+                .HasColumnName("count")
+                .IsRequired();
+
+            e.HasOne(x => x.Strategy)
+                .WithMany(x => x.KeywordMetrics)
+                .HasForeignKey(x => x.StrategyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.Keyword)
+                .HasDatabaseName("idx_keyword_metrics_keyword");
+
+            e.HasIndex(x => new { x.StrategyId, x.Keyword })
+                .IsUnique()
+                .HasDatabaseName("uq_strategy_keyword");
         });
     }
 
