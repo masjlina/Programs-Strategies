@@ -210,3 +210,47 @@ export async function apiUploadDocument<TResponse>(file: File): Promise<TRespons
     body: formData,
   });
 }
+
+export interface SearchStrategyItem {
+  id: string;
+  title: string;
+  regionId?: string | null;
+  districtId?: string | null;
+  communityId?: string | null;
+}
+
+export interface SearchItem {
+  id: string;
+  name: string;
+  type: "Region" | "District" | "Community";
+  regionId?: string | null;
+  districtId?: string | null;
+  communityId?: string | null;
+  regionName: string;
+  districtName: string;
+  strategies: SearchStrategyItem[];
+}
+
+export interface SearchResult {
+  items: SearchItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function searchUnits(
+  query: string,
+  filter: string,
+  sort: string,
+  page: number,
+  pageSize: number
+): Promise<SearchResult> {
+  const params = new URLSearchParams({
+    query,
+    filter,
+    sort,
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+  return apiGet<SearchResult>(`/api/Search?${params.toString()}`);
+}

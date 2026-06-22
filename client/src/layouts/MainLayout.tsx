@@ -4,10 +4,10 @@ import { Footer } from "../components/layout/Footer";
 
 export function MainLayout() {
   return (
-    <>
+    <div className="app">
       <Header />
       <Outlet />
       <Footer />
-    </>
+    </div>
   );
 }

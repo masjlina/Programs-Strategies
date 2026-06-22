@@ -1,88 +1,66 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Container } from "../../components/layout/Container";
 import {
   buildUploadLink,
-  fetchReferenceData,
   getUnitTypeLabel,
+  searchUnits,
+  type SearchItem,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import "./SearchPage.css";
 
-type SelectedFilter = "all" | "community" | "district" | "region";
+type SelectedFilter = "all" | "community" | "region";
 type SelectedSort = "programs-desc" | "programs-asc" | "name-asc";
-type UnitType = "Region" | "District" | "Community";
-
-interface StrategyItem {
-  id: string;
-  title: string;
-  regionId?: string | null;
-  districtId?: string | null;
-  communityId?: string | null;
-}
-
-interface RegionItem {
-  id: string;
-  name?: string;
-  nameFull?: string;
-}
-
-interface DistrictItem {
-  id: string;
-  name?: string;
-  nameFull?: string;
-  regionId?: string;
-}
-
-interface CommunityItem {
-  id: string;
-  name?: string;
-  nameFull?: string;
-  regionId?: string;
-  districtId?: string;
-}
-
-interface SearchItem {
-  id: string;
-  name: string;
-  type: UnitType;
-  regionId?: string | null;
-  districtId?: string | null;
-  communityId?: string | null;
-  regionName: string;
-  districtName: string;
-  strategies: StrategyItem[];
-}
 
 export function SearchPage() {
   const { user } = useAuth();
-  const [regions, setRegions] = useState<RegionItem[]>([]);
-  const [districts, setDistricts] = useState<DistrictItem[]>([]);
-  const [communities, setCommunities] = useState<CommunityItem[]>([]);
-  const [strategies, setStrategies] = useState<StrategyItem[]>([]);
+  const [items, setItems] = useState<SearchItem[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>("all");
   const [selectedSort, setSelectedSort] =
     useState<SelectedSort>("programs-desc");
-  const [visibleCount, setVisibleCount] = useState<number>(30);
 
+  // Debounce the search query to avoid excessive API requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  // Load page 1 when query, filter, or sort options change
   useEffect(() => {
     let cancelled = false;
+    setCurrentPage(1);
 
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const data = await fetchReferenceData();
+        const result = await searchUnits(
+          debouncedQuery,
+          selectedFilter,
+          selectedSort,
+          1,
+          30
+        );
         if (cancelled) return;
-        setRegions((data.regions ?? []) as RegionItem[]);
-        setDistricts((data.districts ?? []) as DistrictItem[]);
-        setCommunities((data.communities ?? []) as CommunityItem[]);
-        setStrategies((data.strategies ?? []) as StrategyItem[]);
+        setItems(result.items);
+        setTotalCount(result.totalCount);
       } catch (err) {
         if (cancelled) return;
         setError(
-          "Не вдалося завантажити дані з сервера. Будь ласка, спробуйте пізніше.",
+          "Не вдалося завантажити дані з сервера. Будь ласка, спробуйте пізніше."
         );
         console.error(err);
       } finally {
@@ -93,120 +71,30 @@ export function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [debouncedQuery, selectedFilter, selectedSort]);
 
-  const regionsMap = useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {};
-    regions.forEach((r) => {
-      map[r.id] = r.nameFull || r.name || "";
-    });
-    return map;
-  }, [regions]);
-
-  const districtsMap = useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {};
-    districts.forEach((d) => {
-      map[d.id] = d.nameFull || d.name || "";
-    });
-    return map;
-  }, [districts]);
-
-  const searchList = useMemo<SearchItem[]>(() => {
-    const list: SearchItem[] = [];
-
-    regions.forEach((r) => {
-      list.push({
-        id: r.id,
-        name: r.nameFull || r.name || "",
-        type: "Region",
-        regionId: r.id,
-        districtId: null,
-        communityId: null,
-        regionName: r.nameFull || r.name || "",
-        districtName: "",
-        strategies: strategies.filter((s) => s.regionId === r.id),
-      });
-    });
-
-    districts.forEach((d) => {
-      list.push({
-        id: d.id,
-        name: d.nameFull || d.name || "",
-        type: "District",
-        regionId: d.regionId,
-        districtId: d.id,
-        communityId: null,
-        regionName: (d.regionId && regionsMap[d.regionId]) || "",
-        districtName: d.nameFull || d.name || "",
-        strategies: strategies.filter((s) => s.districtId === d.id),
-      });
-    });
-
-    communities.forEach((c) => {
-      list.push({
-        id: c.id,
-        name: c.nameFull || c.name || "",
-        type: "Community",
-        regionId: c.regionId,
-        districtId: c.districtId,
-        communityId: c.id,
-        regionName: (c.regionId && regionsMap[c.regionId]) || "",
-        districtName: (c.districtId && districtsMap[c.districtId]) || "",
-        strategies: strategies.filter((s) => s.communityId === c.id),
-      });
-    });
-
-    return list;
-  }, [regions, districts, communities, strategies, regionsMap, districtsMap]);
-
-  const filteredAndSortedList = useMemo<SearchItem[]>(() => {
-    let result = [...searchList];
-
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((item) => {
-        const nameMatch = item.name.toLowerCase().includes(q);
-        const regionMatch = item.regionName.toLowerCase().includes(q);
-        const districtMatch = item.districtName.toLowerCase().includes(q);
-        const strategyMatch = item.strategies.some((s) =>
-          s.title.toLowerCase().includes(q),
-        );
-        return nameMatch || regionMatch || districtMatch || strategyMatch;
-      });
+  // Load next pages when clicking "Show More"
+  const loadMore = async () => {
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const result = await searchUnits(
+        debouncedQuery,
+        selectedFilter,
+        selectedSort,
+        nextPage,
+        30
+      );
+      setItems((prev) => [...prev, ...result.items]);
+      setCurrentPage(nextPage);
+      setTotalCount(result.totalCount);
+    } catch (err) {
+      setError("Не вдалося завантажити додаткові дані.");
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
     }
-
-    if (selectedFilter === "community") {
-      result = result.filter((item) => item.type === "Community");
-    } else if (selectedFilter === "district") {
-      result = result.filter((item) => item.type === "District");
-    } else if (selectedFilter === "region") {
-      result = result.filter((item) => item.type === "Region");
-    }
-
-    result.sort((a, b) => {
-      if (selectedSort === "programs-desc") {
-        const diff = b.strategies.length - a.strategies.length;
-        if (diff !== 0) return diff;
-        return a.name.localeCompare(b.name, "uk");
-      }
-      if (selectedSort === "programs-asc") {
-        const diff = a.strategies.length - b.strategies.length;
-        if (diff !== 0) return diff;
-        return a.name.localeCompare(b.name, "uk");
-      }
-      if (selectedSort === "name-asc") {
-        return a.name.localeCompare(b.name, "uk");
-      }
-      return 0;
-    });
-
-    return result;
-  }, [searchList, searchQuery, selectedFilter, selectedSort]);
-
-  const visibleResults = useMemo(
-    () => filteredAndSortedList.slice(0, visibleCount),
-    [filteredAndSortedList, visibleCount],
-  );
+  };
 
   return (
     <main className="search-hub">
@@ -214,7 +102,7 @@ export function SearchPage() {
         <header className="search-hub__hero">
           <h1 className="search-hub__title">Перелік стратегічних документів</h1>
           <p className="search-hub__subtitle muted">
-            Шукайте громади, райони та області для перегляду їхніх програм
+            Шукайте громади та області для перегляду їхніх програм
             розвитку або додавайте нові.
           </p>
         </header>
@@ -231,7 +119,7 @@ export function SearchPage() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setSearchQuery(e.target.value)
               }
-              placeholder="Введіть назву громади, району, області чи тему програми (наприклад: Освіта)..."
+              placeholder="Введіть назву громади, області чи тему програми (наприклад: Освіта)..."
               aria-label="Пошук територіальних одиниць"
             />
             {searchQuery && (
@@ -263,13 +151,6 @@ export function SearchPage() {
                   onClick={() => setSelectedFilter("community")}
                 >
                   Громади
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-btn ${selectedFilter === "district" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("district")}
-                >
-                  Райони
                 </button>
                 <button
                   type="button"
@@ -315,17 +196,17 @@ export function SearchPage() {
           <>
             <p className="search-results-info muted">
               Знайдено територіальних одиниць:{" "}
-              <strong>{filteredAndSortedList.length}</strong>
+              <strong>{totalCount}</strong>
             </p>
 
-            {filteredAndSortedList.length === 0 ? (
+            {items.length === 0 ? (
               <div className="search-hub__empty">
                 Нічого не знайдено за вашим запитом. Спробуйте змінити ключові
                 слова.
               </div>
             ) : (
               <div className="search-hub__cards-new">
-                {visibleResults.map((item) => (
+                {items.map((item) => (
                   <article
                     key={`${item.type}-${item.id}`}
                     className="unit-card"
@@ -416,14 +297,15 @@ export function SearchPage() {
               </div>
             )}
 
-            {filteredAndSortedList.length > visibleCount && (
+            {items.length < totalCount && (
               <div className="search-hub__more-container">
                 <button
                   type="button"
                   className="btn btn--tonal load-more-btn"
-                  onClick={() => setVisibleCount((prev) => prev + 30)}
+                  onClick={loadMore}
+                  disabled={loadingMore}
                 >
-                  Показати ще
+                  {loadingMore ? "Завантаження..." : "Показати ще"}
                 </button>
               </div>
             )}
