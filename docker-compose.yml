@@ -32,6 +32,11 @@ services:
       ConnectionStrings__ConnStr: Host=db;Port=5432;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD};Database=${POSTGRES_DB:-ProgramsStrategies}
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN}
       Services__NlpServiceUrl: http://nlp:8000
+
+      Authentication__Schemes__Bearer__ValidIssuer: "programs-strategies-api"
+      Authentication__Schemes__Bearer__ValidAudiences__0: "https://strategies.maslina.dev"
+      Authentication__Schemes__Bearer__SigningKeys__0__Issuer: "programs-strategies-api"
+      Authentication__Schemes__Bearer__SigningKeys__0__Value: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
     ports:
       - "8081:5000"
 
@@ -42,7 +47,7 @@ services:
     container_name: programs-strategies-nlp
     restart: unless-stopped
     ports:
-      - "8082:8000"
+      - "8083:8000"
 
   client:
     build:
