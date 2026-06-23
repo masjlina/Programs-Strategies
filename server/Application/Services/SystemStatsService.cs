@@ -20,8 +20,12 @@ public class SystemStatsService : ISystemStatsService
         var communitiesCount = await _dbContext.Communities.CountAsync(cancellationToken);
         var totalStrategiesCount = await _dbContext.Strategies.CountAsync(cancellationToken);
 
-        var communitiesWithoutStrategiesCount = await _dbContext.Communities
-            .CountAsync(c => !c.Strategies.Any(), cancellationToken);
+        var communitiesWithStrategiesCount = await _dbContext.Communities
+            .CountAsync(c => c.Strategies.Any(), cancellationToken);
+
+        var communitiesWithStrategiesPercent = communitiesCount == 0
+            ? 0
+            : Math.Round((double)communitiesWithStrategiesCount / communitiesCount * 100, 1);
 
         var averageStrategiesPerCommunity = communitiesCount == 0
             ? 0
@@ -64,7 +68,8 @@ public class SystemStatsService : ISystemStatsService
             RegionsCount = regionsCount,
             CommunitiesCount = communitiesCount,
             TotalStrategiesCount = totalStrategiesCount,
-            CommunitiesWithoutStrategiesCount = communitiesWithoutStrategiesCount,
+            CommunitiesWithStrategiesCount = communitiesWithStrategiesCount,
+            CommunitiesWithStrategiesPercent = communitiesWithStrategiesPercent,
             AverageStrategiesPerCommunity = averageStrategiesPerCommunity,
             CommunitiesWithWebsiteCount = communitiesWithWebsiteCount,
             CommunitiesWithWebsitePercent = communitiesWithWebsitePercent,

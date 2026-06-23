@@ -5,7 +5,8 @@ public class SystemStatsDto
     public int RegionsCount { get; set; }
     public int CommunitiesCount { get; set; }
     public int TotalStrategiesCount { get; set; }
-    public int CommunitiesWithoutStrategiesCount { get; set; }
+    public int CommunitiesWithStrategiesCount { get; set; }
+    public double CommunitiesWithStrategiesPercent { get; set; }
     public double AverageStrategiesPerCommunity { get; set; }
     public int CommunitiesWithWebsiteCount { get; set; }
     public double CommunitiesWithWebsitePercent { get; set; }

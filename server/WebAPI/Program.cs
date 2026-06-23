@@ -134,7 +134,7 @@ catch (FormatException ex)
 if (signingKey.Length < 32)
 {
     throw new InvalidOperationException(
-        "JWT signing key must be at least 256 bits (32 bytes) after Base64 decoding.");
+        $"JWT signing key must be at least 256 bits (32 bytes) after Base64 decoding. Current key length: {signingKey.Length} bytes.");
 }
 
 builder.Services.AddAuthentication(opt =>

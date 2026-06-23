@@ -9,7 +9,8 @@ export interface SystemStats {
   regionsCount: number;
   communitiesCount: number;
   totalStrategiesCount: number;
-  communitiesWithoutStrategiesCount: number;
+  communitiesWithStrategiesCount: number;
+  communitiesWithStrategiesPercent: number;
   averageStrategiesPerCommunity: number;
   communitiesWithWebsiteCount: number;
   communitiesWithWebsitePercent: number;

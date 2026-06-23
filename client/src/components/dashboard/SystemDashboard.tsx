@@ -1,4 +1,8 @@
+import { useRef, type CSSProperties } from "react";
 import type { SystemStats } from "../../lib/systemStats";
+import { useCountUp } from "../../hooks/useCountUp";
+import { useInView } from "../../hooks/useInView";
+import { StatTile } from "./StatTile";
 
 interface SystemDashboardProps {
   stats: SystemStats;
@@ -16,6 +20,11 @@ function formatDayLabel(date: string): string {
 }
 
 export function SystemDashboard({ stats }: SystemDashboardProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  const chartRef = useRef<HTMLElement>(null);
+  const panelInView = useInView(panelRef);
+  const chartInView = useInView(chartRef);
+
   const maxDailyCount = Math.max(
     1,
     ...stats.strategiesLastMonthByDay.map((item) => item.count),
@@ -24,86 +33,95 @@ export function SystemDashboard({ stats }: SystemDashboardProps) {
     (sum, item) => sum + item.count,
     0,
   );
+  const animatedMonthlyTotal = useCountUp(monthlyTotal, {
+    enabled: chartInView,
+  });
 
   return (
     <section className="strategy-dashboard" aria-label="Дашборд системи">
-      <div className="strategy-dashboard__head">
-        <div>
+      <header className="strategy-dashboard__head">
+        <div className="strategy-dashboard__head-text">
+          <p className="strategy-dashboard__eyebrow">Реєстр стратегій</p>
           <h2 className="strategy-dashboard__title">Огляд бази даних</h2>
           <p className="strategy-dashboard__subtitle muted">
-            Актуальна статистика з реєстру стратегій розвитку
+            Актуальна статистика з реєстру стратегій розвитку територіальних
+            громад та областей України
           </p>
         </div>
-      </div>
+      </header>
 
-      <div className="strategy-dashboard__grid">
-        <article className="metric-card">
-          <p className="metric-card__label">Областей у базі</p>
-          <p className="metric-card__value">{formatCount(stats.regionsCount)}</p>
-          <p className="metric-card__hint">адміністративних одиниць верхнього рівня</p>
-        </article>
+      <section
+        ref={panelRef}
+        className={`system-stats-panel${panelInView ? " system-stats-panel--visible" : ""}`}
+        aria-label="Ключові показники"
+      >
+        <div className="system-stats-panel__featured">
+          <StatTile
+            label="Областей у базі"
+            value={stats.regionsCount}
+            hint="адміністративних одиниць верхнього рівня"
+            animate={panelInView}
+            featured
+            tone="accent"
+            delayMs={0}
+          />
+          <StatTile
+            label="Громад у базі"
+            value={stats.communitiesCount}
+            hint="територіальних громад України"
+            animate={panelInView}
+            featured
+            tone="default"
+            delayMs={80}
+          />
+        </div>
 
-        <article className="metric-card">
-          <p className="metric-card__label">Громад у базі</p>
-          <p className="metric-card__value">
-            {formatCount(stats.communitiesCount)}
-          </p>
-          <p className="metric-card__hint">територіальних громад України</p>
-        </article>
-
-        <article className="metric-card">
-          <p className="metric-card__label">Усього стратегій</p>
-          <p className="metric-card__value">
-            {formatCount(stats.totalStrategiesCount)}
-          </p>
-          <p className="metric-card__hint">завантажених програм розвитку</p>
-        </article>
-
-        <article className="metric-card">
-          <p className="metric-card__label">Громад без стратегій</p>
-          <p className="metric-card__value">
-            {formatCount(stats.communitiesWithoutStrategiesCount)}
-          </p>
-          <p className="metric-card__hint">
-            з {formatCount(stats.communitiesCount)} громад ще без програм
-          </p>
-        </article>
-
-        <article className="metric-card">
-          <p className="metric-card__label">Середня к-сть стратегій</p>
-          <p className="metric-card__value">
-            {stats.averageStrategiesPerCommunity.toLocaleString("uk-UA", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}
-          </p>
-          <p className="metric-card__hint">на одну громаду</p>
-        </article>
-
-        <article className="metric-card">
-          <p className="metric-card__label">Громади з веб-сайтом</p>
-          <p className="metric-card__value">
-            {formatCount(stats.communitiesWithWebsiteCount)}
-          </p>
-          <div className="metric-card__bar">
-            <div
-              className="metric-card__bar-fill"
-              style={{ width: `${stats.communitiesWithWebsitePercent}%` }}
-            />
-          </div>
-          <p className="metric-card__hint">
-            {stats.communitiesWithWebsitePercent.toLocaleString("uk-UA", {
+        <div className="system-stats-panel__grid">
+          <StatTile
+            label="Усього стратегій"
+            value={stats.totalStrategiesCount}
+            hint="завантажених програм розвитку"
+            animate={panelInView}
+            delayMs={160}
+          />
+          <StatTile
+            label="Заповнення бази"
+            value={stats.communitiesWithStrategiesPercent}
+            hint={`${formatCount(stats.communitiesWithStrategiesCount)} з ${formatCount(stats.communitiesCount)} громад мають завантажені стратегії`}
+            animate={panelInView}
+            decimals={1}
+            percentBar={stats.communitiesWithStrategiesPercent}
+            valueSuffix="%"
+            delayMs={240}
+          />
+          <StatTile
+            label="Середня к-сть стратегій"
+            value={stats.averageStrategiesPerCommunity}
+            hint="на одну громаду"
+            animate={panelInView}
+            decimals={stats.averageStrategiesPerCommunity % 1 === 0 ? 0 : 2}
+            delayMs={320}
+          />
+          <StatTile
+            label="Громади з веб-сайтом"
+            value={stats.communitiesWithWebsiteCount}
+            hint={`${stats.communitiesWithWebsitePercent.toLocaleString("uk-UA", {
               minimumFractionDigits: 0,
               maximumFractionDigits: 1,
-            })}
-            % від усіх громад
-          </p>
-        </article>
-      </div>
+            })}% від усіх громад`}
+            animate={panelInView}
+            percentBar={stats.communitiesWithWebsitePercent}
+            delayMs={400}
+          />
+        </div>
+      </section>
 
-      <article className="metric-card metric-card--chart">
+      <article
+        ref={chartRef}
+        className={`metric-card metric-card--chart${chartInView ? " metric-card--chart-visible" : ""}`}
+      >
         <p className="metric-card__label">Додано програм за останній місяць</p>
-        <p className="metric-card__value">{formatCount(monthlyTotal)}</p>
+        <p className="metric-card__value">{formatCount(animatedMonthlyTotal)}</p>
         <p className="metric-card__hint">за останні 30 днів, по днях</p>
 
         <div
@@ -111,18 +129,27 @@ export function SystemDashboard({ stats }: SystemDashboardProps) {
           role="img"
           aria-label="Стовпчастий графік доданих програм за останній місяць"
         >
-          {stats.strategiesLastMonthByDay.map((item) => {
+          {stats.strategiesLastMonthByDay.map((item, index) => {
             const barHeight =
               item.count === 0
                 ? 0
                 : Math.max(6, (item.count / maxDailyCount) * CHART_HEIGHT_PX);
 
             return (
-              <div key={item.date} className="system-dashboard__chart-col">
+              <div
+                key={item.date}
+                className="system-dashboard__chart-col"
+                style={{ animationDelay: `${index * 35}ms` }}
+              >
                 <div className="system-dashboard__chart-bar-area">
                   <div
                     className={`system-dashboard__chart-bar${item.count === 0 ? " system-dashboard__chart-bar--empty" : ""}`}
-                    style={{ height: `${barHeight}px` }}
+                    style={
+                      {
+                        "--bar-target-height": `${barHeight}px`,
+                        animationDelay: `${index * 35 + 120}ms`,
+                      } as CSSProperties
+                    }
                     title={`${formatDayLabel(item.date)}: ${item.count}`}
                   />
                 </div>
