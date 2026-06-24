@@ -1147,17 +1147,25 @@ export function UploadPage() {
                 {/* Units List */}
                 <ul className="units-list">
                   {filteredUnitsList.length > 0 ? (
-                    filteredUnitsList.map((item) => (
-                      <li key={item.id} className="units-list__item">
-                        <button
-                          className="units-list__action-btn"
-                          onClick={() => handleQuickSelect(item)}
+                    filteredUnitsList.map((item) => {
+                      const isSelected = activeTab === 'Community'
+                        ? (selectedType === 'Community' && selectedCommunityId === item.id)
+                        : (selectedType === 'Region' && selectedRegionId === item.id);
+                      return (
+                        <li
+                          key={item.id}
+                          className={`units-list__item ${isSelected ? 'selected' : ''}`}
                         >
-                          <span className="unit-name">{item.name}</span>
-                          <span className="unit-badge">{getUnitTypeLabel(activeTab)}</span>
-                        </button>
-                      </li>
-                    ))
+                          <button
+                            className="units-list__action-btn"
+                            onClick={() => handleQuickSelect(item)}
+                          >
+                            <span className="unit-name">{item.name}</span>
+                            <span className="unit-badge">{getUnitTypeLabel(activeTab)}</span>
+                          </button>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="units-list__empty muted">
                       {searchQuery ? 'Нічого не знайдено' : 'Усі одиниці в цій категорії мають програми!'}

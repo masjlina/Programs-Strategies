@@ -1589,7 +1589,6 @@ export function AdminPage() {
                 </div>
               ) : (
                 <div className="card-panel empty-detail-panel">
-                  <div className="empty-state-illustration">🛡️</div>
                   <h2 className="panel-title">Редагування не обрано</h2>
                   <p className="muted text-center">
                     Будь ласка, оберіть область чи громаду зі списку ліворуч,

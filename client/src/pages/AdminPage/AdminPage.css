@@ -104,7 +104,6 @@
 
 .admin-units-list__item.selected {
   background: var(--accent-bg);
-  border-left: 3px solid var(--accent);
 }
 
 .admin-units-list__action-btn {

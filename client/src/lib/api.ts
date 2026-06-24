@@ -243,7 +243,9 @@ export async function searchUnits(
   filter: string,
   sort: string,
   page: number,
-  pageSize: number
+  pageSize: number,
+  regionId?: string,
+  districtId?: string
 ): Promise<SearchResult> {
   const params = new URLSearchParams({
     query,
@@ -252,5 +254,7 @@ export async function searchUnits(
     page: String(page),
     pageSize: String(pageSize),
   });
+  if (regionId) params.append("regionId", regionId);
+  if (districtId) params.append("districtId", districtId);
   return apiGet<SearchResult>(`/api/Search?${params.toString()}`);
 }

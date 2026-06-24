@@ -121,6 +121,10 @@
     border-bottom: 1px solid var(--border);
 }
 
+.units-list__item.selected {
+    background: var(--accent-bg);
+}
+
 .units-list__item:last-child {
     border-bottom: none;
 }
@@ -321,7 +325,6 @@
     margin-top: 14px;
     padding: 12px 16px;
     background: #fef2f2;
-    border-left: 4px solid #ef4444;
     border-radius: 4px;
     color: #b91c1c;
     font-size: 0.9rem;

@@ -1,20 +1,35 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Container } from "../../components/layout/Container";
 import {
   buildUploadLink,
   getUnitTypeLabel,
   searchUnits,
+  fetchReferenceData,
   type SearchItem,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import "./SearchPage.css";
+
+interface Region {
+  id: string;
+  name: string;
+  nameFull?: string;
+}
+
+interface District {
+  id: string;
+  name: string;
+  nameFull?: string;
+  regionId: string;
+}
 
 type SelectedFilter = "all" | "community" | "region";
 type SelectedSort = "programs-desc" | "programs-asc" | "name-asc";
 
 export function SearchPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<SearchItem[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -23,9 +38,44 @@ export function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
-  const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>("all");
   const [selectedSort, setSelectedSort] =
     useState<SelectedSort>("programs-desc");
+  const [selectedFilter, setSelectedFilter] = useState<SelectedFilter>("all");
+
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [selectedRegionId, setSelectedRegionId] = useState<string>("");
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
+
+  // Load reference data on mount
+  useEffect(() => {
+    fetchReferenceData()
+      .then((data) => {
+        setRegions(data.regions || []);
+        setDistricts(data.districts || []);
+      })
+      .catch((err) => {
+        console.error("Failed to load reference data", err);
+      });
+  }, []);
+
+  // Filter districts based on selected region
+  const filteredDistricts = selectedRegionId
+    ? districts.filter((d) => d.regionId === selectedRegionId)
+    : [];
+
+  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedRegionId(e.target.value);
+    setSelectedDistrictId("");
+  };
+
+  const handleFilterChange = (filter: SelectedFilter) => {
+    setSelectedFilter(filter);
+    if (filter === "region") {
+      setSelectedRegionId("");
+      setSelectedDistrictId("");
+    }
+  };
 
   // Debounce the search query to avoid excessive API requests
   useEffect(() => {
@@ -38,7 +88,7 @@ export function SearchPage() {
     };
   }, [searchQuery]);
 
-  // Load page 1 when query, filter, or sort options change
+  // Load page 1 when query, filter, sort, region, or district changes
   useEffect(() => {
     let cancelled = false;
     setCurrentPage(1);
@@ -52,7 +102,9 @@ export function SearchPage() {
           selectedFilter,
           selectedSort,
           1,
-          30
+          30,
+          selectedRegionId || undefined,
+          selectedDistrictId || undefined
         );
         if (cancelled) return;
         setItems(result.items);
@@ -71,7 +123,7 @@ export function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, selectedFilter, selectedSort]);
+  }, [debouncedQuery, selectedFilter, selectedSort, selectedRegionId, selectedDistrictId]);
 
   // Load next pages when clicking "Show More"
   const loadMore = async () => {
@@ -83,7 +135,9 @@ export function SearchPage() {
         selectedFilter,
         selectedSort,
         nextPage,
-        30
+        30,
+        selectedRegionId || undefined,
+        selectedDistrictId || undefined
       );
       setItems((prev) => [...prev, ...result.items]);
       setCurrentPage(nextPage);
@@ -141,26 +195,69 @@ export function SearchPage() {
                 <button
                   type="button"
                   className={`segmented-btn ${selectedFilter === "all" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("all")}
+                  onClick={() => handleFilterChange("all")}
                 >
                   Всі
                 </button>
                 <button
                   type="button"
                   className={`segmented-btn ${selectedFilter === "community" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("community")}
+                  onClick={() => handleFilterChange("community")}
                 >
                   Громади
                 </button>
                 <button
                   type="button"
                   className={`segmented-btn ${selectedFilter === "region" ? "active" : ""}`}
-                  onClick={() => setSelectedFilter("region")}
+                  onClick={() => handleFilterChange("region")}
                 >
                   Області
                 </button>
               </div>
             </div>
+
+            {selectedFilter !== "region" && (
+              <>
+                <div className="filter-group">
+                  <label className="controls-label" htmlFor="region-select">
+                    Область:
+                  </label>
+                  <select
+                    id="region-select"
+                    className="filter-select"
+                    value={selectedRegionId}
+                    onChange={handleRegionChange}
+                  >
+                    <option value="">Всі</option>
+                    {regions.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nameFull || r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label className="controls-label" htmlFor="district-select">
+                    Район:
+                  </label>
+                  <select
+                    id="district-select"
+                    className="filter-select"
+                    value={selectedDistrictId}
+                    onChange={(e) => setSelectedDistrictId(e.target.value)}
+                    disabled={!selectedRegionId}
+                  >
+                    <option value="">Всі</option>
+                    {filteredDistricts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.nameFull || d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
 
             <div className="sort-group">
               <label className="controls-label" htmlFor="sort-select">
@@ -209,7 +306,18 @@ export function SearchPage() {
                 {items.map((item) => (
                   <article
                     key={`${item.type}-${item.id}`}
-                    className="unit-card"
+                    className={`unit-card ${item.strategies.length === 1 ? "unit-card--clickable" : ""}`}
+                    onClick={
+                      item.strategies.length === 1
+                        ? (e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.closest("a, button")) {
+                              return;
+                            }
+                            navigate(`/strategies/${item.strategies[0].id}`);
+                          }
+                        : undefined
+                    }
                   >
                     <div className="unit-card__header">
                       <span
@@ -287,8 +395,8 @@ export function SearchPage() {
                           })}
                         >
                           {item.strategies.length > 0
-                            ? "➕ Додати ще одну програму"
-                            : "➕ Додати програму"}
+                            ? "Додати ще одну програму"
+                            : "Додати програму"}
                         </Link>
                       </div>
                     )}

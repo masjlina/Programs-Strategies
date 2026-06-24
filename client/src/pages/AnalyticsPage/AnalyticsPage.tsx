@@ -155,7 +155,7 @@ export function AnalyticsPage() {
                 <input
                   type="text"
                   className="analytics-search-card__input"
-                  placeholder="Введіть слово (наприклад: громада, розвиток)..."
+                  placeholder="Введіть слово"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   disabled={isLoading}

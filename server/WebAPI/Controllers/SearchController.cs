@@ -26,6 +26,8 @@ public class SearchController : ControllerBase
         [FromQuery] string? query = null,
         [FromQuery] string? filter = null,
         [FromQuery] string? sort = null,
+        [FromQuery] Guid? regionId = null,
+        [FromQuery] Guid? districtId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 30)
     {
@@ -36,7 +38,7 @@ public class SearchController : ControllerBase
 
         // 1. Determine which entity types to load based on the filter
         bool loadRegions = string.IsNullOrEmpty(filter) || filter == "all" || filter == "region";
-        bool loadDistricts = string.IsNullOrEmpty(filter) || filter == "all" || filter == "district";
+        bool loadDistricts = false; // Disabled because districts do not have strategies
         bool loadCommunities = string.IsNullOrEmpty(filter) || filter == "all" || filter == "community";
 
         // 2. Load Regions
@@ -139,6 +141,16 @@ public class SearchController : ControllerBase
                     }).ToList()
                 });
             }
+        }
+
+        // Apply region and district filter
+        if (regionId.HasValue)
+        {
+            searchItems = searchItems.Where(item => item.RegionId == regionId.Value).ToList();
+        }
+        if (districtId.HasValue)
+        {
+            searchItems = searchItems.Where(item => item.DistrictId == districtId.Value).ToList();
         }
 
         // 5. Apply query filter
