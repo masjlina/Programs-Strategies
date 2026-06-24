@@ -36,6 +36,7 @@ builder.Services.AddScoped<IOperationalGoalService, OperationalGoalService>();
 builder.Services.AddScoped<IProgramTaskService, ProgramTaskService>();
 builder.Services.AddScoped<IParseService, ParseService>();
 builder.Services.AddScoped<IOfficialDataImportService, OfficialDataImportService>();
+builder.Services.AddScoped<ISystemStatsService, SystemStatsService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddHttpClient<ILemmatizer, UkrainianLemmatizer>(client =>
 {
