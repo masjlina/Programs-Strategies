@@ -150,12 +150,6 @@
   padding-block: 24px 20px;
 }
 
-.stat-tile--accent {
-  background:
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 55%),
-    var(--surface);
-}
-
 .stat-tile__label {
   margin: 0;
   font-size: 0.78rem;

@@ -112,30 +112,7 @@ builder.Services.Configure<ApiSettings>(option =>
 });
 
 var apiSettings = apiSettingsSection.Get<ApiSettings>();
-var signingKeyValue = apiSettingsSection["SigningKeys:0:Value"];
-if (string.IsNullOrWhiteSpace(signingKeyValue))
-{
-    throw new InvalidOperationException(
-        "Missing JWT signing key. Copy WebAPI/appsettings.Development.example.json to WebAPI/appsettings.Development.json and set Authentication:Schemes:Bearer:SigningKeys:0:Value to a Base64-encoded key (at least 256 bits).");
-}
-
-byte[] signingKey;
-try
-{
-    signingKey = Convert.FromBase64String(signingKeyValue);
-}
-catch (FormatException ex)
-{
-    throw new InvalidOperationException(
-        "JWT signing key must be a valid Base64 string. Update Authentication:Schemes:Bearer:SigningKeys:0:Value in appsettings.Development.json.",
-        ex);
-}
-
-if (signingKey.Length < 32)
-{
-    throw new InvalidOperationException(
-        $"JWT signing key must be at least 256 bits (32 bytes) after Base64 decoding. Current key length: {signingKey.Length} bytes.");
-}
+var signingKey = Convert.FromBase64String(apiSettingsSection["SigningKeys:0:Value"]);
 
 builder.Services.AddAuthentication(opt =>
 {
