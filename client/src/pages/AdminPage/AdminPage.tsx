@@ -18,7 +18,6 @@ import type {
 type ActiveType = "Region" | "Community";
 type UrlFilter = "all" | "filled" | "empty";
 type StrategiesFilter = "all" | "yes" | "no";
-type AnalysisFilter = "all" | "yes" | "no";
 type ToastType = "success" | "error" | "info";
 
 interface Strategy {
@@ -107,8 +106,6 @@ export function AdminPage() {
     useState<UrlFilter>("all");
   const [hasStrategiesFilter, setHasStrategiesFilter] =
     useState<StrategiesFilter>("all");
-  const [analysisFilter, setAnalysisFilter] = useState<AnalysisFilter>("all");
-  const [analyzingStrategyId, setAnalyzingStrategyId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 12;
@@ -239,19 +236,6 @@ export function AdminPage() {
       );
     }
 
-    if (analysisFilter === "yes") {
-      list = list.filter(
-        (item) => item.strategies && item.strategies.some((s) => s.hasLinguisticAnalysis),
-      );
-    } else if (analysisFilter === "no") {
-      list = list.filter(
-        (item) =>
-          !item.strategies ||
-          item.strategies.length === 0 ||
-          item.strategies.every((s) => !s.hasLinguisticAnalysis),
-      );
-    }
-
     list.sort((a, b) => (a.name || "").localeCompare(b.name || "", "uk"));
     return list;
   }, [
@@ -263,7 +247,6 @@ export function AdminPage() {
     websiteUrlFilter,
     strategiesUrlFilter,
     hasStrategiesFilter,
-    analysisFilter,
   ]);
 
   useEffect(() => {
@@ -275,7 +258,6 @@ export function AdminPage() {
     websiteUrlFilter,
     strategiesUrlFilter,
     hasStrategiesFilter,
-    analysisFilter,
   ]);
 
   const paginatedUnits = useMemo(() => {
@@ -671,62 +653,6 @@ export function AdminPage() {
     }
   };
 
-  const handleStrategyAnalyze = async (strategyId: string) => {
-    setAnalyzingStrategyId(strategyId);
-    try {
-      await apiPost<Strategy, null>(`/api/Strategies/${strategyId}/analyze`, null);
-
-      setSelectedUnit((prev) =>
-        prev
-          ? {
-              ...prev,
-              strategies: (prev.strategies || []).map((s) =>
-                s.id === strategyId ? { ...s, hasLinguisticAnalysis: true } : s,
-              ),
-            }
-          : prev,
-      );
-
-      if (activeType === "Region") {
-        setRegions((prev) =>
-          prev.map((r) =>
-            r.id === selectedUnit?.id
-              ? {
-                  ...r,
-                  strategies: (r.strategies || []).map((s) =>
-                    s.id === strategyId ? { ...s, hasLinguisticAnalysis: true } : s,
-                  ),
-                }
-              : r,
-          ),
-        );
-      } else {
-        setCommunities((prev) =>
-          prev.map((c) =>
-            c.id === selectedUnit?.id
-              ? {
-                  ...c,
-                  strategies: (c.strategies || []).map((s) =>
-                    s.id === strategyId ? { ...s, hasLinguisticAnalysis: true } : s,
-                  ),
-                }
-              : c,
-          ),
-        );
-      }
-
-      showToast("Лінгвістичний аналіз успішно проведено!", "success");
-    } catch (err: unknown) {
-      console.error(err);
-      showToast(
-        err instanceof Error ? err.message : "Помилка при проведенні аналізу",
-        "error",
-      );
-    } finally {
-      setAnalyzingStrategyId(null);
-    }
-  };
-
   const handleStrategyUpdate = async (strategyId: string) => {
     if (!selectedUnit) return;
 
@@ -1110,21 +1036,6 @@ export function AdminPage() {
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Статус лінгвістичного аналізу</label>
-                  <select
-                    className="form-select sidebar-select"
-                    value={analysisFilter}
-                    onChange={(e) =>
-                      setAnalysisFilter(e.target.value as AnalysisFilter)
-                    }
-                    aria-label="Фільтр статусу лінгвістичного аналізу"
-                  >
-                    <option value="all">Без фільтру</option>
-                    <option value="yes">Проведено</option>
-                    <option value="no">Не проведено</option>
-                  </select>
-                </div>
               </div>
 
               <div className="units-count-info muted">
@@ -1541,20 +1452,6 @@ export function AdminPage() {
                                     </div>
                                   </div>
                                   <div className="program-card__actions">
-                                    <button
-                                      type="button"
-                                      className="btn btn--primary btn--sm"
-                                      onClick={() =>
-                                        handleStrategyAnalyze(strategy.id)
-                                      }
-                                      disabled={
-                                        strategy.hasLinguisticAnalysis || analyzingStrategyId === strategy.id
-                                      }
-                                    >
-                                      {analyzingStrategyId === strategy.id
-                                        ? "Аналіз..."
-                                        : strategy.hasLinguisticAnalysis ? "Аналізовано" : "Аналізувати"}
-                                    </button>
                                     <button
                                       type="button"
                                       className="btn btn--tonal btn--sm"

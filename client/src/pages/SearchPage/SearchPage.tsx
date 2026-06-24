@@ -70,6 +70,16 @@ export function SearchPage() {
   };
 
   const handleFilterChange = (filter: SelectedFilter) => {
+    if (
+      filter === "all" &&
+      selectedFilter === "community" &&
+      selectedRegionId &&
+      selectedDistrictId
+    ) {
+      setSelectedSort("programs-desc");
+      setSelectedRegionId("");
+      setSelectedDistrictId("");
+    }
     setSelectedFilter(filter);
     if (filter === "region") {
       setSelectedRegionId("");
