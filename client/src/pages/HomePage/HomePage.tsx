@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Container } from "../../components/layout/Container";
 import { SystemDashboard } from "../../components/dashboard/SystemDashboard";
 import { fetchSystemStats, type SystemStats } from "../../lib/systemStats";
+import { FileText, Search, BarChart3 } from "lucide-react";
 import "./HomePage.css";
 
 export function HomePage() {
@@ -81,13 +82,42 @@ export function HomePage() {
         </Container>
       </section>
 
-      <section id="about" className="home-section">
-        <Container>
-          <h2>Про сайт</h2>
-          <p className="muted">
-            Сервіс збирає стратегії та плани розвитку територіальних громад і
-            областей.
-          </p>
+      <section id="about" className="home-section home-about">
+        <Container className="home-about__inner">
+          <div className="home-about__info">
+            <h2 className="home-about__title">Про проект</h2>
+            <p className="home-about__description">
+              Об'єднуємо громади навколо спільних рішень з сильними проектами. Зроблено в Україні для України. Разом будуємо
+              ефективну спільноту розвитку.
+            </p>
+          </div>
+          <div className="home-about__feature">
+            <div className="home-about__icon-container">
+              <FileText className="home-about__icon" />
+            </div>
+            <div className="home-about__text">
+              <div className="home-about__feature-title">Єдина база документів</div>
+              <div className="home-about__feature-desc">усі стратегії в одному місці</div>
+            </div>
+          </div>
+          <div className="home-about__feature">
+            <div className="home-about__icon-container">
+              <Search className="home-about__icon" />
+            </div>
+            <div className="home-about__text">
+              <div className="home-about__feature-title">Зручний пошук і фільтри</div>
+              <div className="home-about__feature-desc">швидкий доступ до потрібної інформації</div>
+            </div>
+          </div>
+          <div className="home-about__feature">
+            <div className="home-about__icon-container">
+              <BarChart3 className="home-about__icon" />
+            </div>
+            <div className="home-about__text">
+              <div className="home-about__feature-title">Порівняння та аналітика</div>
+              <div className="home-about__feature-desc">наочні дашборди для рішень</div>
+            </div>
+          </div>
         </Container>
       </section>
     </main>

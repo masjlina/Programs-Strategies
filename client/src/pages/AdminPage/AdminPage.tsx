@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { Container } from "../../components/layout/Container";
-import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "../../lib/api";
+import { apiGet, apiPut, apiPatch, apiDelete } from "../../lib/api";
 import "./AdminPage.css";
 import "../UploadPage/UploadPage.css";
 import { EditableGoalsTree } from "../UploadPage/UploadPage";
