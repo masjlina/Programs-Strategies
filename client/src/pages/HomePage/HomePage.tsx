@@ -55,6 +55,13 @@ export function HomePage() {
               </a>
             </div>
           </div>
+          <div className="home-hero__image-container">
+            <img
+              src="/hero-illustration.png"
+              alt="Ілюстрація стратегій розвитку міст"
+              className="home-hero__image"
+            />
+          </div>
         </Container>
       </section>
 

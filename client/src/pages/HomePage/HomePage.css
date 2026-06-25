@@ -2,33 +2,80 @@
   min-height: auto;
   display: grid;
   align-items: center;
-  padding-block: 48px;
+  padding-block: 56px;
+  overflow: hidden;
 }
 
 .home-hero__inner {
   text-align: left;
+  display: grid;
+  grid-template-columns: 0.6fr 0.9fr;
+  gap: 48px;
+  align-items: center;
 }
 
 .home-hero__content {
-  max-width: 720px;
+  max-width: 100%;
 }
 
 .home-hero__title {
-  margin-bottom: 12px;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+  color: var(--text-h);
 }
 
 .home-hero__text {
+  font-size: 1.05rem;
   max-width: 62ch;
-  margin-bottom: 24px;
-  line-height: 1.55;
+  margin-bottom: 32px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.home-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  text-align: center;
+  gap: 12px;
 }
 
 .home-hero__actions .btn + .btn {
-  margin-left: 10px;
+  margin-left: 0;
 }
 
 .home-hero__dashboard-link {
   margin-top: 0;
+}
+
+.home-hero__image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.home-hero__image {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 20px;
+  filter: drop-shadow(0 20px 40px rgba(15, 23, 42, 0.08));
+}
+
+@keyframes heroFloat {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 .home-section {
@@ -334,7 +381,8 @@
   .metric-card--chart,
   .system-dashboard__chart-col,
   .system-dashboard__chart-bar,
-  .stat-tile__bar-fill {
+  .stat-tile__bar-fill,
+  .home-hero__image {
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;
@@ -348,6 +396,31 @@
 }
 
 @media (max-width: 960px) {
+  .home-hero__inner {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    text-align: center;
+  }
+
+  .home-hero__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .home-hero__text {
+    margin-inline: auto;
+  }
+
+  .home-hero__actions {
+    justify-content: center;
+  }
+
+  .home-hero__image-container {
+    max-width: 480px;
+    margin-inline: auto;
+  }
+
   .system-stats-panel__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -376,7 +449,6 @@
 }
 
 .home-section--alt {
-  background: color-mix(in srgb, var(--surface) 65%, transparent);
   border-block: 1px solid var(--border);
 }
 
