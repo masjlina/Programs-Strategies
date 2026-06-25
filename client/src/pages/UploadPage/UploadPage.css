@@ -218,7 +218,6 @@
 
 .level-radio-label.active {
     border-color: var(--accent);
-    background: var(--accent-bg);
     color: var(--accent-strong);
 }
 

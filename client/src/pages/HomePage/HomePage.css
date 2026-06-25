@@ -7,18 +7,10 @@
 
 .home-hero__inner {
   text-align: left;
-  max-width: 720px;
 }
 
-.home-hero__kicker {
-  display: inline-flex;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
-  font-size: 14px;
-  color: var(--text-h);
-  margin-bottom: 12px;
+.home-hero__content {
+  max-width: 720px;
 }
 
 .home-hero__title {
@@ -31,7 +23,7 @@
   line-height: 1.55;
 }
 
-.home-hero__inner .btn + .btn {
+.home-hero__actions .btn + .btn {
   margin-left: 10px;
 }
 
@@ -371,12 +363,12 @@
     min-height: auto;
   }
 
-  .home-hero__inner .btn + .btn {
+  .home-hero__actions .btn + .btn {
     margin-left: 0;
     margin-top: 10px;
   }
 
-  .home-hero__inner .btn {
+  .home-hero__actions .btn {
     display: inline-flex;
     width: 100%;
     justify-content: center;

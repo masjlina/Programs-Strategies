@@ -266,12 +266,10 @@
 }
 
 .unit-card__status--has-program {
-  background: var(--accent-bg);
   color: var(--accent-strong);
 }
 
 .unit-card__status--no-program {
-  background: #f1f5f9;
   color: #475569;
 }
 

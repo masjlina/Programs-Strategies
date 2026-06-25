@@ -41,7 +41,6 @@ export function SystemDashboard({ stats }: SystemDashboardProps) {
     <section className="strategy-dashboard" aria-label="Дашборд системи">
       <header className="strategy-dashboard__head">
         <div className="strategy-dashboard__head-text">
-          <p className="strategy-dashboard__eyebrow">Реєстр стратегій</p>
           <h2 className="strategy-dashboard__title">Огляд бази даних</h2>
           <p className="strategy-dashboard__subtitle muted">
             Актуальна статистика з реєстру стратегій розвитку територіальних
