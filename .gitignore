@@ -48,3 +48,4 @@ logs/
 *.njsproj
 *.ntvs*
 *.sln
+nlp-service/__pycache__/main.cpython-314.pyc

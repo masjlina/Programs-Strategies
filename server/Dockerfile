@@ -16,7 +16,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 RUN apt-get update \
- && apt-get install -y libgssapi-krb5-2 \
+ && apt-get install -y --no-install-recommends \
+    libgssapi-krb5-2 \
+    libreoffice-nogui \
  && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 5000
