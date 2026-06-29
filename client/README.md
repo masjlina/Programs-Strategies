@@ -88,94 +88,24 @@ Vite автоматично перезавантажує сторінку при
 
 ## Структура проєкту
 
+Спрощена структура клієнтської частини:
+
 ```
 client/
-├── public/                    # Статичні файли (favicon, іконки)
+├── public/          # Статичні файли (іконки, картинки)
 ├── src/
-│   ├── main.tsx               # Точка входу React
-│   ├── App.tsx                # Маршрутизація та AuthProvider
-│   ├── App.css                # Глобальні стилі layout, кнопок, шапки
-│   ├── index.css              # CSS-змінні та базові стилі
-│   │
-│   ├── context/
-│   │   └── AuthContext.tsx    # Стан авторизації, sign-in / sign-out
-│   │
-│   ├── layouts/
-│   │   └── MainLayout.tsx     # Шапка + контент + футер
-│   │
-│   ├── pages/                 # Сторінки (кожна — .tsx + .css)
-│   │   ├── HomePage/          # Лендінг, блок «Про сайт», SystemDashboard
-│   │   ├── SearchPage/        # Пошук і картки територіальних одиниць
-│   │   ├── StrategyPage/      # Деталі стратегії та посилання на документ
-│   │   ├── UploadPage/        # Форма завантаження стратегії (JSON)
-│   │   ├── AdminPage/         # Адмін-панель URL громад/областей
-│   │   └── NotFoundPage/      # Сторінка 404
-│   │
-│   ├── components/
-│   │   ├── layout/            # Header, Footer, Container
-│   │   ├── auth/              # LoginDropdown
-│   │   ├── dashboard/         # SystemDashboard, StatTile (головна)
-│   │   ├── search/            # StrategyGoalsTree, StrategyDetailPanel тощо
-│   │   ├── CollapsibleBlock/  # UI-блок з розгортанням
-│   │   └── ProtectedRoute.tsx # Редирект для неавторизованих
-│   │
-│   ├── hooks/
-│   │   ├── useCountUp.ts      # Анімація лічильника (дашборд)
-│   │   └── useInView.ts       # Intersection Observer для анімацій
-│   │
-│   ├── lib/                   # Логіка роботи з API та даними
-│   │   ├── api.ts             # HTTP-клієнт, CORS, JWT refresh
-│   │   ├── strategies.ts      # Каталог стратегій, нормалізація, пошук
-│   │   ├── strategyMetrics.ts # Метрики для карток/таблиць стратегії
-│   │   └── systemStats.ts     # Запит GET /api/Stats для головної
-│   │
-│   ├── types/                 # TypeScript-інтерфейси доменної моделі
-│   │   ├── strategy.ts
-│   │   ├── strategicGoal.ts
-│   │   ├── operationalGoal.ts
-│   │   ├── programTask.ts
-│   │   ├── administrativeUnit.ts
-│   │   └── administrativeUnitType.ts
-│   │
-│   └── vite-env.d.ts          # Типи для Vite (import.meta.env, JSON)
-│
-├── index.html                 # HTML-шаблон
-├── vite.config.ts             # Vite + React Compiler
-├── tsconfig.json              # Project references
-├── tsconfig.app.json          # Налаштування TS для src/
-├── eslint.config.js           # ESLint
-├── Dockerfile                 # Production-збірка (nginx)
-├── nginx.conf                 # Проксі /api → бекенд у Docker
-├── .env.local.example         # Приклад змінних середовища
-└── package.json
+│   ├── api/         # Запити до API бекенду
+│   ├── components/  # Картки, дерева цілей, авторизація, спільні UI-елементи
+│   ├── context/     # Глобальні стани (AuthContext)
+│   ├── hooks/       # Кастомні хуки (useCountUp, useInView)
+│   ├── layouts/     # Основні макети сторінок
+│   ├── pages/       # Сторінки (HomePage, SearchPage, StrategyPage, UploadPage, AdminPage)
+│   ├── types/       # TypeScript-інтерфейси доменної моделі
+│   ├── App.tsx      # Маршрутизація та провайдери
+│   └── main.tsx     # Точка входу React
+├── Dockerfile       # Production-конфігурація для Nginx
+└── package.json     # Залежності та скрипти
 ```
-
----
-
-## Як організований код
-
-### API-шар (`src/lib/`)
-
-- `**api.ts**` — базовий клієнт: `apiGet`, `apiPost`, `apiPatch`, `apiDelete`, зберігання access token, автоматичний refresh через `/api/refresh`.
-- `**strategies.ts**` — завантаження списку стратегій і одиниць, побудова «каталогу» для UI, нормалізація ієрархії цілей.
-- `**systemStats.ts**` — агрегована статистика системи для головної сторінки.
-- `**strategyMetrics.ts**` — розрахунок показників для компонентів перегляду стратегії.
-
-### Сторінки
-
-Кожна сторінка — окремий каталог з компонентом `.tsx` і стилями `.css`. Дані завантажуються в `useEffect` через функції з `lib/`, помилки та стан завантаження обробляються локально на сторінці.
-
-### Компоненти
-
-- `**components/layout/**` — спільна оболонка сайту.
-- `**components/search/**` — перегляд стратегії: дерево цілей (`StrategyGoalsTree`), картки, таблиці.
-- `**components/dashboard/**` — блок статистики на головній (`SystemDashboard`).
-
-### Типи (`src/types/`)
-
-Інтерфейси, що відповідають моделі бекенду: стратегія → стратегічна ціль → операційна ціль → програмне завдання.
-
----
 
 ## Production-збірка
 
@@ -205,11 +135,3 @@ npm run build
 **Сторінки `/upload` та `/admin` не відкриваються**
 
 - Потрібна авторизація через кнопку «Увійти» у шапці.
-
----
-
-## Пов’язана документація
-
-- [README бекенду](../server/README.md) — API, PostgreSQL, Swagger
-- [docker-compose.yml](../docker-compose.yml) — запуск усієї системи в контейнерах
-
